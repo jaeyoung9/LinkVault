@@ -1,0 +1,30 @@
+package org.link.linkvault.dto;
+
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+import java.util.Set;
+
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class BookmarkRequestDto {
+
+    @NotBlank(message = "Title is required")
+    @Size(max = 255, message = "Title must be 255 characters or less")
+    private String title;
+
+    @NotBlank(message = "URL is required")
+    @Size(max = 2048, message = "URL must be 2048 characters or less")
+    private String url;
+
+    @Size(max = 1000, message = "Description must be 1000 characters or less")
+    private String description;
+
+    private Set<String> tagNames;
+}
