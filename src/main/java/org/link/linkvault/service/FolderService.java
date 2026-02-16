@@ -23,7 +23,9 @@ public class FolderService {
     private final FolderRepository folderRepository;
 
     private boolean isAdmin(User user) {
-        return user.getRole() == Role.ADMIN;
+        return user.getRole() == Role.SUPER_ADMIN
+                || user.getRole() == Role.ADMIN
+                || user.getRole() == Role.MODERATOR;
     }
 
     public List<FolderResponseDto> findRootFolders(User currentUser) {

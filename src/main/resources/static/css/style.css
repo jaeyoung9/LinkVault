@@ -117,7 +117,7 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 /* ===== Main Content ===== */
 .main-content {
     padding: 24px 32px;
-    max-width: 1200px;
+    /*  max-width: 1200px */
 }
 
 /* ===== Header Bar ===== */
@@ -555,39 +555,85 @@ select.form-control { cursor: pointer; }
     border-radius: var(--radius);
     padding: 24px;
 }
-.comment-section { max-width: 800px; }
+.comment-section { /*max-width: 800px;*/ }
+
+/* Comment thread structure */
 .comment-item {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    margin-bottom: 8px;
+    padding: 10px 14px;
+    margin-bottom: 2px;
+    position: relative;
 }
+.comment-thread {
+    position: relative;
+    margin-left: 20px;
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+}
+.comment-thread:hover {
+    border-left-color: var(--text-muted);
+}
+.comment-thread .comment-item:first-child {
+    margin-top: 4px;
+}
+
+/* Header */
 .comment-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
+    margin-bottom: 4px;
+    font-size: 0.82rem;
 }
-.comment-header strong { color: var(--accent); }
-.comment-time { color: var(--text-muted); font-size: 0.75rem; }
-.comment-edited { color: var(--text-muted); font-size: 0.72rem; font-style: italic; }
+.comment-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.comment-header strong { color: var(--accent); font-size: 0.82rem; }
+.comment-time { color: var(--text-muted); font-size: 0.72rem; }
+.comment-edited { color: var(--text-muted); font-size: 0.7rem; font-style: italic; }
+
+/* Reply-to label */
+.comment-reply-to {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.comment-reply-to a {
+    color: var(--accent);
+    font-weight: 500;
+}
+
+/* Content */
 .comment-content {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     line-height: 1.5;
     white-space: pre-wrap;
 }
+.comment-content.deleted-content {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Actions */
 .comment-actions {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
 }
 .vote-btn {
     background: none;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: 4px;
     color: var(--text-muted);
     padding: 2px 8px;
@@ -595,15 +641,45 @@ select.form-control { cursor: pointer; }
     cursor: pointer;
     transition: all 0.15s;
 }
-.vote-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.vote-btn:hover { border-color: var(--border); color: var(--text-primary); }
 .vote-btn.vote-active { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.1); }
 .comment-action-btn {
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     cursor: pointer;
     padding: 2px 6px;
 }
 .comment-action-btn:hover { color: var(--accent); }
-.reply-form { margin-top: 8px; padding-left: 16px; }
+
+/* Collapse / expand toggle */
+.comment-collapse-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 6px 0;
+    margin-top: 2px;
+}
+.comment-collapse-btn:hover { text-decoration: underline; }
+
+/* Reply form */
+.reply-form { margin-top: 8px; }
+.reply-form-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.reply-form-label strong { color: var(--accent); font-weight: 500; }
+.reply-form-label .reply-form-close {
+    margin-left: auto;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.reply-form-label .reply-form-close:hover { color: var(--text-primary); }

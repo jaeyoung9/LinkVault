@@ -29,6 +29,7 @@
                 <a th:each="tag : ${bookmark.tagNames}" th:href="@{'/tag/' + ${tag}}" class="tag-badge" th:text="${tag}">tag</a>
             </div>
             <div style="margin-top: 8px; font-size: 0.78rem; color: var(--text-muted);">
+                <span th:if="${bookmark.ownerUsername != null}" th:text="'by ' + ${bookmark.ownerUsername}"></span>
                 <span th:if="${bookmark.folderName != null}" th:text="'Folder: ' + ${bookmark.folderName}"></span>
                 <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
                 <span th:text="'Comments: ' + ${bookmark.commentCount}">Comments: 0</span>

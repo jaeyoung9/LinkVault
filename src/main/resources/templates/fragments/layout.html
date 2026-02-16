@@ -88,7 +88,15 @@
         <a href="javascript:void(0)" class="bookmark-title js-access-link"
            th:data-id="${bookmark.id}" th:data-url="${bookmark.url}"
            th:text="${bookmark.title}">Title</a>
-        <div class="bookmark-actions">
+        <div class="bookmark-actions"
+             th:if="${bookmark.ownerUsername == currentUser}"
+             sec:authorize="isAuthenticated()">
+            <button class="btn btn-sm btn-outline js-edit-btn" th:data-id="${bookmark.id}">Edit</button>
+            <button class="btn btn-sm btn-danger js-delete-btn" th:data-id="${bookmark.id}">Del</button>
+        </div>
+        <div class="bookmark-actions"
+             th:if="${bookmark.ownerUsername != currentUser}"
+             sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')">
             <button class="btn btn-sm btn-outline js-edit-btn" th:data-id="${bookmark.id}">Edit</button>
             <button class="btn btn-sm btn-danger js-delete-btn" th:data-id="${bookmark.id}">Del</button>
         </div>
@@ -101,12 +109,12 @@
             <a th:each="tag : ${bookmark.tagNames}" th:href="@{'/tag/' + ${tag}}" class="tag-badge" th:text="${tag}">tag</a>
         </div>
         <div class="bookmark-stats">
+            <span th:if="${bookmark.ownerUsername != null}" th:text="'by ' + ${bookmark.ownerUsername}"></span>
             <span th:if="${bookmark.folderName != null}" th:text="'Folder: ' + ${bookmark.folderName}"></span>
             <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
-            <a th:if="${bookmark.commentCount != null and bookmark.commentCount > 0}"
-               th:href="@{'/bookmark/' + ${bookmark.id}}"
+            <a th:href="@{'/bookmark/' + ${bookmark.id}}"
                style="color: var(--text-muted); text-decoration: none;"
-               th:text="'Comments: ' + ${bookmark.commentCount}">Comments: 0</a>
+               th:text="${bookmark.commentCount != null and bookmark.commentCount > 0} ? 'Comments: ' + ${bookmark.commentCount} : 'Comment'">Comment</a>
         </div>
     </div>
 </div>

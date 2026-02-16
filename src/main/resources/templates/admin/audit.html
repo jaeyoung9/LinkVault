@@ -40,7 +40,7 @@
         </table>
 
         <!-- Pagination -->
-        <div th:if="${logs != null}" class="pagination" th:if="${logs.totalPages > 1}">
+        <div th:if="${logs != null and logs.totalPages > 1}" class="pagination">
             <a class="page-link" th:classappend="${logs.first} ? 'disabled'"
                th:href="@{/admin/audit(page=${logs.number - 1})}">&laquo;</a>
             <th:block th:each="i : ${#numbers.sequence(0, logs.totalPages - 1)}">

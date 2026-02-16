@@ -66,6 +66,15 @@ public class CommentService {
         boolean canDelete = currentUser != null && !comment.isDeleted() &&
                 comment.getUser().getId().equals(currentUser.getId());
 
+        String parentUsername = null;
+        if (comment.getParent() != null) {
+            parentUsername = comment.getParent().isDeleted()
+                    ? "[deleted]"
+                    : comment.getParent().getUser().getUsername();
+        }
+
+        int replyCount = countAllReplies(comment.getId(), childrenMap);
+
         return CommentResponseDto.builder()
                 .id(comment.getId())
                 .content(comment.getContent())
@@ -73,10 +82,12 @@ public class CommentService {
                 .userId(comment.getUser().getId())
                 .bookmarkId(comment.getBookmark().getId())
                 .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
+                .parentUsername(parentUsername)
                 .depth(comment.getDepth())
                 .likeCount(comment.getLikeCount())
                 .dislikeCount(comment.getDislikeCount())
                 .score(comment.getLikeCount() - comment.getDislikeCount())
+                .replyCount(replyCount)
                 .deleted(comment.isDeleted())
                 .edited(comment.isEdited())
                 .createdAt(comment.getCreatedAt())
@@ -86,6 +97,15 @@ public class CommentService {
                 .canDelete(canDelete)
                 .replies(childDtos)
                 .build();
+    }
+
+    private int countAllReplies(Long commentId, Map<Long, List<Comment>> childrenMap) {
+        List<Comment> direct = childrenMap.getOrDefault(commentId, Collections.emptyList());
+        int count = direct.size();
+        for (Comment child : direct) {
+            count += countAllReplies(child.getId(), childrenMap);
+        }
+        return count;
     }
 
     @Transactional

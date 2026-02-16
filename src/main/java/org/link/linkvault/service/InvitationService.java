@@ -68,8 +68,11 @@ public class InvitationService {
 
     @Transactional
     public void consume(InvitationCode invitation, User user) {
-        invitation.recordUse();
-        invitationUseRepository.save(new InvitationUse(invitation, user));
+        // Re-fetch to get a managed entity (invitation is detached from validate()'s read-only tx)
+        InvitationCode managed = invitationCodeRepository.findById(invitation.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation code not found"));
+        managed.recordUse();
+        invitationUseRepository.save(new InvitationUse(managed, user));
     }
 
     @Transactional

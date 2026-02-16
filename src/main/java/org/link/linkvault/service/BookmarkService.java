@@ -37,27 +37,20 @@ public class BookmarkService {
     private final AuditLogService auditLogService;
 
     private boolean isAdmin(User user) {
-        return user.getRole() == Role.ADMIN;
+        return user.getRole() == Role.SUPER_ADMIN
+                || user.getRole() == Role.ADMIN
+                || user.getRole() == Role.MODERATOR;
     }
 
-    // --- Paginated listing ---
+    // --- Paginated listing (all bookmarks visible to all users) ---
 
     public Page<BookmarkResponseDto> findAll(User currentUser, Pageable pageable) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.findAllWithTagsAndFolder(pageable)
-                    .map(BookmarkResponseDto::from);
-        }
-        return bookmarkRepository.findByUserId(currentUser.getId(), pageable)
+        return bookmarkRepository.findAllWithTagsAndFolder(pageable)
                 .map(BookmarkResponseDto::from);
     }
 
     public List<BookmarkResponseDto> findAll(User currentUser) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.findAllWithTagsAndFolder().stream()
-                    .map(BookmarkResponseDto::from)
-                    .collect(Collectors.toList());
-        }
-        return bookmarkRepository.findByUserId(currentUser.getId(), Pageable.unpaged()).stream()
+        return bookmarkRepository.findAllWithTagsAndFolder().stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }
@@ -163,12 +156,7 @@ public class BookmarkService {
     }
 
     public List<BookmarkResponseDto> findFrequentlyAccessed(User currentUser, int limit) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.findTopByAccessCount(PageRequest.of(0, limit)).stream()
-                    .map(BookmarkResponseDto::from)
-                    .collect(Collectors.toList());
-        }
-        return bookmarkRepository.findTopByAccessCountAndUserId(currentUser.getId(), PageRequest.of(0, limit)).stream()
+        return bookmarkRepository.findTopByAccessCount(PageRequest.of(0, limit)).stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }
@@ -182,43 +170,24 @@ public class BookmarkService {
     // --- Search & filter ---
 
     public Page<BookmarkResponseDto> searchByKeyword(User currentUser, String keyword, Pageable pageable) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.searchByKeyword(keyword, pageable)
-                    .map(BookmarkResponseDto::from);
-        }
-        return bookmarkRepository.searchByKeywordAndUserId(currentUser.getId(), keyword, pageable)
+        return bookmarkRepository.searchByKeyword(keyword, pageable)
                 .map(BookmarkResponseDto::from);
     }
 
     public List<BookmarkResponseDto> findByTagName(User currentUser, String tagName) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.findByTagName(tagName).stream()
-                    .map(BookmarkResponseDto::from)
-                    .collect(Collectors.toList());
-        }
-        return bookmarkRepository.findByUserIdAndTagName(currentUser.getId(), tagName).stream()
+        return bookmarkRepository.findByTagName(tagName).stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }
 
     public List<BookmarkResponseDto> findByFolderId(User currentUser, Long folderId) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.findByFolderIdWithTags(folderId).stream()
-                    .map(BookmarkResponseDto::from)
-                    .collect(Collectors.toList());
-        }
-        return bookmarkRepository.findByUserIdAndFolderId(currentUser.getId(), folderId).stream()
+        return bookmarkRepository.findByFolderIdWithTags(folderId).stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }
 
     public List<BookmarkResponseDto> findUncategorized(User currentUser) {
-        if (isAdmin(currentUser)) {
-            return bookmarkRepository.findByFolderIsNullWithTags().stream()
-                    .map(BookmarkResponseDto::from)
-                    .collect(Collectors.toList());
-        }
-        return bookmarkRepository.findByUserIdAndFolderIsNull(currentUser.getId()).stream()
+        return bookmarkRepository.findByFolderIsNullWithTags().stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }

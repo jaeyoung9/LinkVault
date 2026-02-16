@@ -11,7 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     @EntityGraph(attributePaths = {"user"})
-    @Query("SELECT a FROM AuditLog a ORDER BY a.timestamp DESC")
+    @Query(value = "SELECT a FROM AuditLog a ORDER BY a.timestamp DESC",
+           countQuery = "SELECT COUNT(a) FROM AuditLog a")
     Page<AuditLog> findAllWithUser(Pageable pageable);
 
     @Query("SELECT a FROM AuditLog a WHERE a.user.id = :userId ORDER BY a.timestamp DESC")

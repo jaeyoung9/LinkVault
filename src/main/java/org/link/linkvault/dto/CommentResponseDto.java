@@ -18,10 +18,12 @@ public class CommentResponseDto {
     private Long userId;
     private Long bookmarkId;
     private Long parentId;
+    private String parentUsername;
     private int depth;
     private int likeCount;
     private int dislikeCount;
     private int score;
+    private int replyCount;
     private boolean deleted;
     private boolean edited;
     private LocalDateTime createdAt;

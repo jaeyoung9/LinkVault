@@ -176,7 +176,7 @@ public class DataInitializer implements CommandLineRunner {
         InvitationCode code = InvitationCode.builder()
                 .code("WELCOME1")
                 .createdBy(admin)
-                .maxUses(10)
+                .maxUses(1)
                 .active(true)
                 .note("Default test invitation code")
                 .assignedRole(Role.USER)
