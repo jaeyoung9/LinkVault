@@ -38,7 +38,7 @@ public class BookmarkService {
 
     private boolean isAdmin(User user) {
         return user.getRole() == Role.SUPER_ADMIN
-                || user.getRole() == Role.ADMIN
+                || user.getRole() == Role.COMMUNITY_ADMIN
                 || user.getRole() == Role.MODERATOR;
     }
 
@@ -141,8 +141,32 @@ public class BookmarkService {
             throw new SecurityException("Access denied");
         }
 
+        bookmark.softDelete();
+        auditLogService.log(currentUser.getUsername(), "SOFT_DELETE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
+    }
+
+    @Transactional
+    public void restore(User currentUser, Long id) {
+        Bookmark bookmark = bookmarkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
+        bookmark.restore();
+        auditLogService.log(currentUser.getUsername(), "RESTORE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
+    }
+
+    public Page<BookmarkResponseDto> findAllDeleted(Pageable pageable) {
+        return bookmarkRepository.findAllDeletedBookmarks(pageable)
+                .map(BookmarkResponseDto::from);
+    }
+
+    @Transactional
+    public void purge(User currentUser, Long id) {
+        Bookmark bookmark = bookmarkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
+        if (!bookmark.isDeleted()) {
+            throw new IllegalStateException("Cannot purge a bookmark that is not soft-deleted");
+        }
         bookmarkRepository.delete(bookmark);
-        auditLogService.log(currentUser.getUsername(), "DELETE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
+        auditLogService.log(currentUser.getUsername(), "PURGE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
     }
 
     // --- Access tracking ---

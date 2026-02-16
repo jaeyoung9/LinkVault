@@ -14,6 +14,10 @@
     <div class="main-content">
         <div class="content-header">
             <h2>All Bookmarks</h2>
+            <div style="display:flex;gap:8px;">
+                <a href="/admin/bookmarks" class="btn btn-sm btn-outline" th:classappend="${showDeleted == null or !showDeleted} ? 'btn-active' : ''">Active</a>
+                <a href="/admin/bookmarks?deleted=true" class="btn btn-sm btn-outline" th:classappend="${showDeleted != null and showDeleted} ? 'btn-active' : ''">Deleted</a>
+            </div>
         </div>
 
         <table class="data-table">
@@ -44,8 +48,12 @@
                 <td th:text="${bookmark.folderName != null} ? ${bookmark.folderName} : '-'">-</td>
                 <td th:text="${bookmark.accessCount}">0</td>
                 <td th:text="${bookmark.createdAt != null} ? ${#temporals.format(bookmark.createdAt, 'yyyy-MM-dd')} : '-'">2024-01-01</td>
-                <td>
+                <td th:if="${!bookmark.deleted}">
                     <button class="btn btn-sm btn-danger js-admin-delete-bookmark" th:data-id="${bookmark.id}">Del</button>
+                </td>
+                <td th:if="${bookmark.deleted}">
+                    <button class="btn btn-sm btn-outline js-restore-bookmark" th:data-id="${bookmark.id}">Restore</button>
+                    <button class="btn btn-sm btn-danger js-purge-bookmark" th:data-id="${bookmark.id}">Purge</button>
                 </td>
             </tr>
             </tbody>
@@ -57,5 +65,26 @@
 </div>
 
 <script th:src="@{/js/admin.js}"></script>
+<script>
+document.querySelectorAll('.js-restore-bookmark').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-id');
+        if (!confirm('Restore this bookmark?')) return;
+        fetch('/api/admin/bookmarks/' + id + '/restore', { method: 'PATCH' })
+            .then(function(r) { if (!r.ok) throw r; location.reload(); })
+            .catch(function() { alert('Error restoring bookmark'); });
+    });
+});
+
+document.querySelectorAll('.js-purge-bookmark').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-id');
+        if (!confirm('Permanently delete this bookmark? This cannot be undone.')) return;
+        fetch('/api/admin/bookmarks/' + id + '/purge', { method: 'DELETE' })
+            .then(function(r) { if (!r.ok) throw r; location.reload(); })
+            .catch(function() { alert('Error purging bookmark'); });
+    });
+});
+</script>
 </body>
 </html>

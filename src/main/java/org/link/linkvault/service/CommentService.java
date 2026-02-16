@@ -227,4 +227,25 @@ public class CommentService {
                 .map(CommentResponseDto::from)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public void restoreComment(Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
+        if (!comment.isDeleted()) {
+            throw new IllegalStateException("Comment is not deleted");
+        }
+        comment.restore();
+        comment.getBookmark().incrementCommentCount();
+    }
+
+    @Transactional
+    public void purgeComment(Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
+        if (!comment.isDeleted()) {
+            throw new IllegalStateException("Cannot purge a comment that is not soft-deleted");
+        }
+        commentRepository.delete(comment);
+    }
 }

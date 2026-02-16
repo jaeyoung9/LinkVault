@@ -52,7 +52,7 @@ public class CommentController {
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getUserEntity(userDetails.getUsername());
         boolean isModerator = userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("MODERATE_COMMENTS"));
+                .anyMatch(a -> a.getAuthority().equals("COMMENT_HIDE"));
         return ResponseEntity.ok(commentService.update(id, body.get("content"), user, isModerator));
     }
 
@@ -63,7 +63,7 @@ public class CommentController {
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getUserEntity(userDetails.getUsername());
         boolean isModerator = userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("MODERATE_COMMENTS"));
+                .anyMatch(a -> a.getAuthority().equals("COMMENT_HIDE"));
         commentService.delete(id, user, isModerator);
         return ResponseEntity.noContent().build();
     }

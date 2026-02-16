@@ -37,26 +37,26 @@ public class AdminApiController {
     // --- User CRUD ---
 
     @PostMapping("/users")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserRequestDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(dto));
     }
 
     @PutMapping("/users/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserResponseDto> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequestDto dto) {
         return ResponseEntity.ok(userService.update(id, dto));
     }
 
     @DeleteMapping("/users/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/users/{id}/toggle")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserResponseDto> toggleUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.toggleEnabled(id));
     }
@@ -95,7 +95,7 @@ public class AdminApiController {
     // --- Bookmark Management ---
 
     @DeleteMapping("/bookmarks/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_BOOKMARKS')")
+    @PreAuthorize("hasAuthority('BOOKMARK_DELETE_ANY')")
     public ResponseEntity<Void> deleteBookmark(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id) {
@@ -107,20 +107,20 @@ public class AdminApiController {
     // --- Backup/Restore ---
 
     @PostMapping("/backup")
-    @PreAuthorize("hasAuthority('MANAGE_BACKUP')")
+    @PreAuthorize("hasAuthority('BACKUP_RUN')")
     public ResponseEntity<Map<String, String>> createBackup() {
         String filename = databaseBackupService.createBackup();
         return ResponseEntity.ok(Map.of("filename", filename, "message", "Backup created: " + filename));
     }
 
     @GetMapping("/backups")
-    @PreAuthorize("hasAuthority('MANAGE_BACKUP')")
+    @PreAuthorize("hasAuthority('BACKUP_RUN')")
     public ResponseEntity<java.util.List<String>> listBackups() {
         return ResponseEntity.ok(databaseBackupService.listBackups());
     }
 
     @PostMapping("/restore")
-    @PreAuthorize("hasAuthority('MANAGE_BACKUP')")
+    @PreAuthorize("hasAuthority('BACKUP_RUN')")
     public ResponseEntity<Map<String, String>> restoreBackup(@RequestBody Map<String, String> body) {
         String filename = body.get("filename");
         databaseBackupService.restoreBackup(filename);
@@ -130,13 +130,13 @@ public class AdminApiController {
     // --- Comment Moderation ---
 
     @GetMapping("/comments")
-    @PreAuthorize("hasAuthority('MODERATE_COMMENTS')")
+    @PreAuthorize("hasAuthority('COMMENT_HIDE')")
     public ResponseEntity<List<CommentResponseDto>> getAllComments() {
         return ResponseEntity.ok(commentService.getAllComments());
     }
 
     @DeleteMapping("/comments/{id}")
-    @PreAuthorize("hasAuthority('MODERATE_COMMENTS')")
+    @PreAuthorize("hasAuthority('COMMENT_HIDE')")
     public ResponseEntity<Void> deleteComment(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -145,16 +145,62 @@ public class AdminApiController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/comments/{id}/restore")
+    @PreAuthorize("hasAuthority('COMMENT_RESTORE')")
+    public ResponseEntity<Map<String, String>> restoreComment(@PathVariable Long id) {
+        commentService.restoreComment(id);
+        return ResponseEntity.ok(Map.of("message", "Comment restored"));
+    }
+
+    @DeleteMapping("/comments/{id}/purge")
+    @PreAuthorize("hasAuthority('CONTENT_PURGE')")
+    public ResponseEntity<Void> purgeComment(@PathVariable Long id) {
+        commentService.purgeComment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Bookmark Soft-Delete Management ---
+
+    @GetMapping("/bookmarks/deleted")
+    @PreAuthorize("hasAuthority('BOOKMARK_RESTORE')")
+    public ResponseEntity<org.springframework.data.domain.Page<BookmarkResponseDto>> getDeletedBookmarks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(bookmarkService.findAllDeleted(
+                org.springframework.data.domain.PageRequest.of(page, size,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "updatedAt"))));
+    }
+
+    @PatchMapping("/bookmarks/{id}/restore")
+    @PreAuthorize("hasAuthority('BOOKMARK_RESTORE')")
+    public ResponseEntity<Map<String, String>> restoreBookmark(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User admin = userService.getUserEntity(userDetails.getUsername());
+        bookmarkService.restore(admin, id);
+        return ResponseEntity.ok(Map.of("message", "Bookmark restored"));
+    }
+
+    @DeleteMapping("/bookmarks/{id}/purge")
+    @PreAuthorize("hasAuthority('CONTENT_PURGE')")
+    public ResponseEntity<Void> purgeBookmark(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User admin = userService.getUserEntity(userDetails.getUsername());
+        bookmarkService.purge(admin, id);
+        return ResponseEntity.noContent().build();
+    }
+
     // --- Invitation Management ---
 
     @GetMapping("/invitations")
-    @PreAuthorize("hasAuthority('MANAGE_INVITATIONS')")
+    @PreAuthorize("hasAuthority('INVITE_ISSUE')")
     public ResponseEntity<List<InvitationCodeResponseDto>> getInvitations() {
         return ResponseEntity.ok(invitationService.findAll());
     }
 
     @PostMapping("/invitations")
-    @PreAuthorize("hasAuthority('MANAGE_INVITATIONS')")
+    @PreAuthorize("hasAuthority('INVITE_ISSUE')")
     public ResponseEntity<InvitationCodeResponseDto> createInvitation(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody InvitationCodeRequestDto dto) {
@@ -163,14 +209,14 @@ public class AdminApiController {
     }
 
     @PatchMapping("/invitations/{id}/toggle")
-    @PreAuthorize("hasAuthority('MANAGE_INVITATIONS')")
+    @PreAuthorize("hasAuthority('INVITE_REVOKE')")
     public ResponseEntity<Map<String, String>> toggleInvitation(@PathVariable Long id) {
         invitationService.toggleActive(id);
         return ResponseEntity.ok(Map.of("message", "Invitation toggled"));
     }
 
     @DeleteMapping("/invitations/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_INVITATIONS')")
+    @PreAuthorize("hasAuthority('INVITE_REVOKE')")
     public ResponseEntity<Void> deleteInvitation(@PathVariable Long id) {
         invitationService.delete(id);
         return ResponseEntity.noContent().build();
@@ -179,14 +225,14 @@ public class AdminApiController {
     // --- Menu Management ---
 
     @GetMapping("/menus")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<List<MenuItemResponseDto>> getMenuItems(
             @RequestParam org.link.linkvault.entity.MenuType menuType) {
         return ResponseEntity.ok(menuService.getAllMenuItems(menuType));
     }
 
     @PostMapping("/menus")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<MenuItemResponseDto> createMenuItem(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody MenuItemRequestDto dto) {
@@ -195,28 +241,28 @@ public class AdminApiController {
     }
 
     @PutMapping("/menus/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<MenuItemResponseDto> updateMenuItem(
             @PathVariable Long id, @Valid @RequestBody MenuItemRequestDto dto) {
         return ResponseEntity.ok(menuService.update(id, dto));
     }
 
     @DeleteMapping("/menus/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<Void> deleteMenuItem(@PathVariable Long id) {
         menuService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/menus/{id}/toggle")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<Map<String, String>> toggleMenuVisibility(@PathVariable Long id) {
         menuService.toggleVisibility(id);
         return ResponseEntity.ok(Map.of("message", "Menu visibility toggled"));
     }
 
     @PatchMapping("/menus/reorder")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<Map<String, String>> reorderMenuItems(
             @RequestBody List<MenuItemOrderDto> orders) {
         menuService.reorder(orders);

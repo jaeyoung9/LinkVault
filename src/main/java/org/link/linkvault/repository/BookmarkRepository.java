@@ -16,7 +16,7 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
 
     // --- Fetch-join queries to prevent N+1 (non-paginated) ---
 
-    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder")
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder WHERE b.deleted = false")
     List<Bookmark> findAllWithTagsAndFolder();
 
     @EntityGraph(attributePaths = {"tags", "folder"})
@@ -25,28 +25,29 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     // --- Paginated listing (batch_fetch_size handles tags N+1, folder is ManyToOne so eager-safe) ---
 
     @EntityGraph(attributePaths = {"folder"})
-    @Query("SELECT b FROM Bookmark b")
+    @Query("SELECT b FROM Bookmark b WHERE b.deleted = false")
     Page<Bookmark> findAllWithTagsAndFolder(Pageable pageable);
 
     // --- User-scoped paginated listing ---
 
     @EntityGraph(attributePaths = {"folder"})
-    @Query("SELECT b FROM Bookmark b WHERE b.user.id = :userId")
+    @Query("SELECT b FROM Bookmark b WHERE b.user.id = :userId AND b.deleted = false")
     Page<Bookmark> findByUserId(@Param("userId") Long userId, Pageable pageable);
 
     // --- Full-text search with pagination ---
 
     @EntityGraph(attributePaths = {"folder"})
     @Query("SELECT b FROM Bookmark b " +
-            "WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(b.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "WHERE b.deleted = false AND (" +
+            "LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(b.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Bookmark> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     // --- User-scoped search ---
 
     @EntityGraph(attributePaths = {"folder"})
     @Query("SELECT b FROM Bookmark b " +
-            "WHERE b.user.id = :userId AND (" +
+            "WHERE b.deleted = false AND b.user.id = :userId AND (" +
             "LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(b.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Bookmark> searchByKeywordAndUserId(@Param("userId") Long userId, @Param("keyword") String keyword, Pageable pageable);
@@ -54,31 +55,31 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     // --- Filter by tag with fetch join ---
 
     @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder " +
-            "JOIN b.tags t WHERE t.name = :tagName")
+            "JOIN b.tags t WHERE b.deleted = false AND t.name = :tagName")
     List<Bookmark> findByTagName(@Param("tagName") String tagName);
 
     // --- User-scoped tag filter ---
 
     @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder " +
-            "JOIN b.tags t WHERE b.user.id = :userId AND t.name = :tagName")
+            "JOIN b.tags t WHERE b.deleted = false AND b.user.id = :userId AND t.name = :tagName")
     List<Bookmark> findByUserIdAndTagName(@Param("userId") Long userId, @Param("tagName") String tagName);
 
     // --- Filter by folder ---
 
-    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.folder.id = :folderId")
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.deleted = false AND b.folder.id = :folderId")
     List<Bookmark> findByFolderIdWithTags(@Param("folderId") Long folderId);
 
     // --- User-scoped folder filter ---
 
-    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.user.id = :userId AND b.folder.id = :folderId")
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.deleted = false AND b.user.id = :userId AND b.folder.id = :folderId")
     List<Bookmark> findByUserIdAndFolderId(@Param("userId") Long userId, @Param("folderId") Long folderId);
 
-    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.folder IS NULL")
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.deleted = false AND b.folder IS NULL")
     List<Bookmark> findByFolderIsNullWithTags();
 
     // --- User-scoped uncategorized ---
 
-    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.user.id = :userId AND b.folder IS NULL")
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags WHERE b.deleted = false AND b.user.id = :userId AND b.folder IS NULL")
     List<Bookmark> findByUserIdAndFolderIsNull(@Param("userId") Long userId);
 
     // --- Duplicate URL detection ---
@@ -93,19 +94,19 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     // --- Frequently accessed (batch_fetch_size handles tags) ---
 
     @EntityGraph(attributePaths = {"folder"})
-    @Query("SELECT b FROM Bookmark b ORDER BY b.accessCount DESC")
+    @Query("SELECT b FROM Bookmark b WHERE b.deleted = false ORDER BY b.accessCount DESC")
     List<Bookmark> findTopByAccessCount(Pageable pageable);
 
     // --- User-scoped frequently accessed ---
 
     @EntityGraph(attributePaths = {"folder"})
-    @Query("SELECT b FROM Bookmark b WHERE b.user.id = :userId ORDER BY b.accessCount DESC")
+    @Query("SELECT b FROM Bookmark b WHERE b.deleted = false AND b.user.id = :userId ORDER BY b.accessCount DESC")
     List<Bookmark> findTopByAccessCountAndUserId(@Param("userId") Long userId, Pageable pageable);
 
     // --- Recently accessed (batch_fetch_size handles tags) ---
 
     @EntityGraph(attributePaths = {"folder"})
-    @Query("SELECT b FROM Bookmark b WHERE b.lastAccessedAt IS NOT NULL ORDER BY b.lastAccessedAt DESC")
+    @Query("SELECT b FROM Bookmark b WHERE b.deleted = false AND b.lastAccessedAt IS NOT NULL ORDER BY b.lastAccessedAt DESC")
     List<Bookmark> findRecentlyAccessed(Pageable pageable);
 
     // --- Admin stats ---
@@ -113,4 +114,13 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
     List<Bookmark> findAllByUserId(Long userId);
+
+    // --- Deleted bookmarks (soft-delete support) ---
+
+    @EntityGraph(attributePaths = {"folder"})
+    @Query("SELECT b FROM Bookmark b WHERE b.deleted = true")
+    Page<Bookmark> findAllDeletedBookmarks(Pageable pageable);
+
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder WHERE b.deleted = true AND b.user.id = :userId")
+    List<Bookmark> findAllDeletedByUserId(@Param("userId") Long userId);
 }

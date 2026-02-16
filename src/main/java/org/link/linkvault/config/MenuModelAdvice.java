@@ -113,6 +113,6 @@ public class MenuModelAdvice {
                 }
             }
         }
-        return Role.USER;
+        return Role.MEMBER;
     }
 }

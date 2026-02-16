@@ -48,7 +48,7 @@ public class InvitationService {
                 .active(true)
                 .expiresAt(expiresAt)
                 .note(dto.getNote())
-                .assignedRole(dto.getAssignedRole() != null ? dto.getAssignedRole() : Role.USER)
+                .assignedRole(dto.getAssignedRole() != null ? dto.getAssignedRole() : Role.MEMBER)
                 .build();
 
         invitation = invitationCodeRepository.save(invitation);

@@ -95,9 +95,9 @@ public class MenuService {
     private int getRoleLevel(Role role) {
         switch (role) {
             case SUPER_ADMIN: return 4;
-            case ADMIN: return 3;
+            case COMMUNITY_ADMIN: return 3;
             case MODERATOR: return 2;
-            case USER: return 1;
+            case MEMBER: return 1;
             default: return 0;
         }
     }

@@ -37,7 +37,7 @@
                 <td th:text="${user.email}">admin@test.com</td>
                 <td>
                     <span class="badge"
-                          th:classappend="${user.role.name() == 'SUPER_ADMIN'} ? 'badge-purple' : (${user.role.name() == 'ADMIN'} ? 'badge-warning' : (${user.role.name() == 'MODERATOR'} ? 'badge-orange' : 'badge-info'))"
+                          th:classappend="${user.role.name() == 'SUPER_ADMIN'} ? 'badge-purple' : (${user.role.name() == 'COMMUNITY_ADMIN'} ? 'badge-warning' : (${user.role.name() == 'MODERATOR'} ? 'badge-orange' : 'badge-info'))"
                           th:text="${user.role}">ADMIN</span>
                 </td>
                 <td th:text="${user.bookmarkCount}">0</td>
@@ -82,9 +82,9 @@
             <div class="form-group">
                 <label for="userRole">Role *</label>
                 <select id="userRole" class="form-control">
-                    <option value="USER">USER</option>
+                    <option value="MEMBER">MEMBER</option>
                     <option value="MODERATOR">MODERATOR</option>
-                    <option value="ADMIN">ADMIN</option>
+                    <option value="COMMUNITY_ADMIN">COMMUNITY_ADMIN</option>
                     <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                 </select>
             </div>

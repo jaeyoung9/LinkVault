@@ -24,11 +24,11 @@
         <!-- Fallback if no dynamic menus yet -->
         <th:block th:if="${adminMenuItems == null or adminMenuItems.isEmpty()}">
             <a href="/admin" class="sidebar-link" sec:authorize="hasAuthority('VIEW_STATS')">Dashboard</a>
-            <a href="/admin/users" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_USERS')">Users</a>
+            <a href="/admin/users" class="sidebar-link" sec:authorize="hasAuthority('USER_MANAGE')">Users</a>
             <a href="/admin/bookmarks" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_BOOKMARKS')">All Bookmarks</a>
             <a href="/admin/tags" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_TAGS')">Tag Management</a>
-            <a href="/admin/audit" class="sidebar-link" sec:authorize="hasAuthority('VIEW_AUDIT_LOG')">Audit Log</a>
-            <a href="/admin/backup" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_BACKUP')">Backup / Restore</a>
+            <a href="/admin/audit" class="sidebar-link" sec:authorize="hasAuthority('AUDIT_VIEW')">Audit Log</a>
+            <a href="/admin/backup" class="sidebar-link" sec:authorize="hasAuthority('BACKUP_RUN')">Backup / Restore</a>
             <a href="/admin/permissions" class="sidebar-link" sec:authorize="hasRole('ROLE_SUPER_ADMIN')">Permissions</a>
         </th:block>
     </div>

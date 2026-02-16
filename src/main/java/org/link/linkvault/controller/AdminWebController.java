@@ -38,7 +38,7 @@ public class AdminWebController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public String users(Model model) {
         model.addAttribute("users", userService.findAll());
         return "admin/users";
@@ -50,10 +50,18 @@ public class AdminWebController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Boolean deleted,
             Model model) {
-        User currentUser = userService.getUserEntity(userDetails.getUsername());
-        model.addAttribute("bookmarks", bookmarkService.findAll(currentUser,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
+        if (Boolean.TRUE.equals(deleted)) {
+            model.addAttribute("bookmarks", bookmarkService.findAllDeleted(
+                    PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"))));
+            model.addAttribute("showDeleted", true);
+        } else {
+            User currentUser = userService.getUserEntity(userDetails.getUsername());
+            model.addAttribute("bookmarks", bookmarkService.findAll(currentUser,
+                    PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
+            model.addAttribute("showDeleted", false);
+        }
         return "admin/bookmarks";
     }
 
@@ -65,7 +73,7 @@ public class AdminWebController {
     }
 
     @GetMapping("/audit")
-    @PreAuthorize("hasAuthority('VIEW_AUDIT_LOG')")
+    @PreAuthorize("hasAuthority('AUDIT_VIEW')")
     public String audit(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -75,26 +83,26 @@ public class AdminWebController {
     }
 
     @GetMapping("/backup")
-    @PreAuthorize("hasAuthority('MANAGE_BACKUP')")
+    @PreAuthorize("hasAuthority('BACKUP_RUN')")
     public String backup(Model model) {
         model.addAttribute("backups", databaseBackupService.listBackups());
         return "admin/backup";
     }
 
     @GetMapping("/comments")
-    @PreAuthorize("hasAuthority('MODERATE_COMMENTS')")
+    @PreAuthorize("hasAuthority('COMMENT_HIDE')")
     public String comments() {
         return "admin/comments";
     }
 
     @GetMapping("/invitations")
-    @PreAuthorize("hasAuthority('MANAGE_INVITATIONS')")
+    @PreAuthorize("hasAuthority('INVITE_ISSUE')")
     public String invitations() {
         return "admin/invitations";
     }
 
     @GetMapping("/menus")
-    @PreAuthorize("hasAuthority('MANAGE_MENUS')")
+    @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public String menus() {
         return "admin/menus";
     }

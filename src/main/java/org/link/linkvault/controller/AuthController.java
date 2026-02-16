@@ -37,7 +37,7 @@ public class AuthController {
         }
 
         // Determine role from invitation code
-        Role role = invitation.getAssignedRole() != null ? invitation.getAssignedRole() : Role.USER;
+        Role role = invitation.getAssignedRole() != null ? invitation.getAssignedRole() : Role.MEMBER;
 
         // Create user
         User user = User.builder()
@@ -61,7 +61,7 @@ public class AuthController {
             InvitationCode invitation = invitationService.validate(code);
             return ResponseEntity.ok(Map.of(
                     "valid", true,
-                    "assignedRole", invitation.getAssignedRole() != null ? invitation.getAssignedRole().name() : "USER"
+                    "assignedRole", invitation.getAssignedRole() != null ? invitation.getAssignedRole().name() : "MEMBER"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.ok(Map.of("valid", false, "message", e.getMessage()));

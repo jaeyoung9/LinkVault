@@ -166,7 +166,7 @@
         </div>
         <div class="bookmark-actions"
              th:if="${bookmark.ownerUsername != currentUser}"
-             sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')">
+             sec:authorize="hasAnyRole('SUPER_ADMIN','COMMUNITY_ADMIN')">
             <button class="btn btn-sm btn-outline js-edit-btn" th:data-id="${bookmark.id}">Edit</button>
             <button class="btn btn-sm btn-danger js-delete-btn" th:data-id="${bookmark.id}">Del</button>
         </div>

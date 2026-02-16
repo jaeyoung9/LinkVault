@@ -58,7 +58,9 @@ function loadComments() {
                     '<td>' + status + '</td>' +
                     '<td>' + (c.createdAt ? c.createdAt.replace('T', ' ').substring(0, 16) : '-') + '</td>' +
                     '<td>' +
-                    (!c.deleted ? '<button class="btn btn-sm btn-danger" onclick="moderateDelete(' + c.id + ')">Delete</button>' : '-') +
+                    (!c.deleted ? '<button class="btn btn-sm btn-danger" onclick="moderateDelete(' + c.id + ')">Delete</button>' :
+                        '<button class="btn btn-sm btn-outline" onclick="restoreComment(' + c.id + ')">Restore</button> ' +
+                        '<button class="btn btn-sm btn-danger" onclick="purgeComment(' + c.id + ')">Purge</button>') +
                     '</td>';
                 tbody.appendChild(tr);
             });
@@ -71,6 +73,20 @@ function moderateDelete(id) {
     fetch('/api/admin/comments/' + id, { method: 'DELETE' })
         .then(function() { showToast('Comment deleted'); loadComments(); })
         .catch(function() { showToast('Error deleting comment', 'error'); });
+}
+
+function restoreComment(id) {
+    if (!confirm('Restore this comment?')) return;
+    fetch('/api/admin/comments/' + id + '/restore', { method: 'PATCH' })
+        .then(function(r) { if (!r.ok) throw r; showToast('Comment restored'); loadComments(); })
+        .catch(function() { showToast('Error restoring comment', 'error'); });
+}
+
+function purgeComment(id) {
+    if (!confirm('Permanently delete this comment? This cannot be undone.')) return;
+    fetch('/api/admin/comments/' + id + '/purge', { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw r; showToast('Comment permanently deleted'); loadComments(); })
+        .catch(function() { showToast('Error purging comment', 'error'); });
 }
 
 document.addEventListener('DOMContentLoaded', loadComments);

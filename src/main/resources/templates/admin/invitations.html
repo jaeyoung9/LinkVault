@@ -52,9 +52,9 @@
             <div class="form-group">
                 <label for="invRole">Assigned Role</label>
                 <select id="invRole" class="form-control">
-                    <option value="USER">USER</option>
+                    <option value="MEMBER">MEMBER</option>
                     <option value="MODERATOR">MODERATOR</option>
-                    <option value="ADMIN">ADMIN</option>
+                    <option value="COMMUNITY_ADMIN">COMMUNITY_ADMIN</option>
                 </select>
             </div>
             <div class="form-group">
@@ -86,7 +86,7 @@ function loadInvitations() {
                     '<td><code style="background:var(--bg-card);padding:2px 8px;border-radius:4px;cursor:pointer;" onclick="copyCode(\'' + c.code + '\')">' + c.code + '</code></td>' +
                     '<td>' + (c.createdByUsername || '-') + '</td>' +
                     '<td>' + c.currentUses + ' / ' + (c.maxUses > 0 ? c.maxUses : 'unlimited') + '</td>' +
-                    '<td><span class="badge badge-info">' + (c.assignedRole || 'USER') + '</span></td>' +
+                    '<td><span class="badge badge-info">' + (c.assignedRole || 'MEMBER') + '</span></td>' +
                     '<td>' + (c.expiresAt ? c.expiresAt.replace('T', ' ').substring(0, 16) : 'Never') + '</td>' +
                     '<td style="font-size:0.78rem;">' + (c.note || '-') + '</td>' +
                     '<td>' + statusBadge + '</td>' +

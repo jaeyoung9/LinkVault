@@ -21,6 +21,7 @@ public class BookmarkResponseDto {
     private Long folderId;
     private String folderName;
     private String ownerUsername;
+    private boolean deleted;
     private int accessCount;
     private int commentCount;
     private LocalDateTime lastAccessedAt;
@@ -40,6 +41,7 @@ public class BookmarkResponseDto {
                 .folderId(bookmark.getFolder() != null ? bookmark.getFolder().getId() : null)
                 .folderName(bookmark.getFolder() != null ? bookmark.getFolder().getName() : null)
                 .ownerUsername(bookmark.getUser() != null ? bookmark.getUser().getUsername() : null)
+                .deleted(bookmark.isDeleted())
                 .accessCount(bookmark.getAccessCount())
                 .commentCount(bookmark.getCommentCount())
                 .lastAccessedAt(bookmark.getLastAccessedAt())

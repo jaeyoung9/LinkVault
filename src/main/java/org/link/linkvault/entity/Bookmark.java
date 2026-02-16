@@ -56,6 +56,9 @@ public class Bookmark {
     private Set<Tag> tags = new HashSet<>();
 
     @Column(nullable = false)
+    private boolean deleted = false;
+
+    @Column(nullable = false)
     private int accessCount = 0;
 
     @Column(nullable = false)
@@ -127,5 +130,13 @@ public class Bookmark {
 
     public void decrementCommentCount() {
         if (this.commentCount > 0) this.commentCount--;
+    }
+
+    public void softDelete() {
+        this.deleted = true;
+    }
+
+    public void restore() {
+        this.deleted = false;
     }
 }

@@ -43,39 +43,45 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing permissions...");
 
         List<Permission> permissions = Arrays.asList(
-                new Permission("MANAGE_USERS", "Create, edit, and delete users", "ADMIN"),
-                new Permission("MANAGE_MENUS", "Create, edit, and delete menu items", "ADMIN"),
-                new Permission("MANAGE_TAGS", "Create, merge, and delete tags", "CONTENT"),
-                new Permission("MANAGE_BOOKMARKS", "Edit and delete any bookmark", "CONTENT"),
-                new Permission("MANAGE_INVITATIONS", "Create and manage invitation codes", "ADMIN"),
-                new Permission("MODERATE_COMMENTS", "Edit and delete any comment", "MODERATION"),
-                new Permission("VIEW_AUDIT_LOG", "View audit log entries", "ADMIN"),
-                new Permission("MANAGE_BACKUP", "Create and restore backups", "ADMIN"),
+                new Permission("USER_MANAGE", "Create, edit, and delete users", "ADMIN"),
+                new Permission("MENU_MANAGE", "Create, edit, and delete menu items", "ADMIN"),
+                new Permission("INVITE_ISSUE", "Create invitation codes", "ADMIN"),
+                new Permission("INVITE_REVOKE", "Revoke invitation codes", "ADMIN"),
+                new Permission("AUDIT_VIEW", "View audit log entries", "ADMIN"),
+                new Permission("BACKUP_RUN", "Create and restore backups", "ADMIN"),
                 new Permission("VIEW_STATS", "View system statistics", "ADMIN"),
-                new Permission("COMMENT", "Post comments on bookmarks", "COMMUNITY"),
-                new Permission("VOTE", "Vote on comments", "COMMUNITY"),
+                new Permission("MANAGE_ANNOUNCEMENTS", "Create, edit, and delete announcements", "ADMIN"),
+                new Permission("MANAGE_TAGS", "Create, merge, and delete tags", "CONTENT"),
+                new Permission("MANAGE_BOOKMARKS", "Edit bookmarks", "CONTENT"),
+                new Permission("BOOKMARK_DELETE_ANY", "Soft-delete any bookmark", "CONTENT"),
+                new Permission("BOOKMARK_RESTORE", "Restore soft-deleted bookmarks", "CONTENT"),
                 new Permission("MANAGE_QNA", "Create, edit, and delete QnA articles", "CONTENT"),
-                new Permission("MANAGE_ANNOUNCEMENTS", "Create, edit, and delete announcements", "ADMIN")
+                new Permission("COMMENT_HIDE", "Soft-delete any comment", "MODERATION"),
+                new Permission("COMMENT_RESTORE", "Restore soft-deleted comments", "MODERATION"),
+                new Permission("CONTENT_PURGE", "Permanently delete soft-deleted content", "MODERATION"),
+                new Permission("COMMENT", "Post comments on bookmarks", "COMMUNITY"),
+                new Permission("VOTE", "Vote on comments", "COMMUNITY")
         );
         permissionRepository.saveAll(permissions);
 
         // Default permission assignments
-        // ADMIN: all except implicit SUPER_ADMIN-only features
-        assignPermissions(Role.ADMIN, Arrays.asList(
-                "MANAGE_USERS", "MANAGE_MENUS", "MANAGE_TAGS", "MANAGE_BOOKMARKS",
-                "MANAGE_INVITATIONS", "MODERATE_COMMENTS", "VIEW_AUDIT_LOG",
-                "MANAGE_BACKUP", "VIEW_STATS", "COMMENT", "VOTE",
-                "MANAGE_QNA", "MANAGE_ANNOUNCEMENTS"
+        // COMMUNITY_ADMIN: all except CONTENT_PURGE (reserved for SUPER_ADMIN)
+        assignPermissions(Role.COMMUNITY_ADMIN, Arrays.asList(
+                "USER_MANAGE", "MENU_MANAGE", "INVITE_ISSUE", "INVITE_REVOKE",
+                "AUDIT_VIEW", "BACKUP_RUN", "VIEW_STATS", "MANAGE_ANNOUNCEMENTS",
+                "MANAGE_TAGS", "MANAGE_BOOKMARKS", "BOOKMARK_DELETE_ANY", "BOOKMARK_RESTORE",
+                "MANAGE_QNA", "COMMENT_HIDE", "COMMENT_RESTORE",
+                "COMMENT", "VOTE"
         ));
 
         // MODERATOR: limited admin + community
         assignPermissions(Role.MODERATOR, Arrays.asList(
-                "MANAGE_TAGS", "MODERATE_COMMENTS", "VIEW_AUDIT_LOG",
-                "VIEW_STATS", "COMMENT", "VOTE", "MANAGE_QNA"
+                "COMMENT_HIDE", "AUDIT_VIEW", "VIEW_STATS",
+                "MANAGE_TAGS", "MANAGE_QNA", "COMMENT", "VOTE"
         ));
 
-        // USER: community only
-        assignPermissions(Role.USER, Arrays.asList("COMMENT", "VOTE"));
+        // MEMBER: community only
+        assignPermissions(Role.MEMBER, Arrays.asList("COMMENT", "VOTE"));
 
         log.info("Permissions initialized with default role assignments");
     }
@@ -107,7 +113,7 @@ public class DataInitializer implements CommandLineRunner {
                 .username("user")
                 .email("user@linkvault.com")
                 .password(passwordEncoder.encode("user123"))
-                .role(Role.USER)
+                .role(Role.MEMBER)
                 .enabled(true)
                 .build();
         userRepository.save(user);
@@ -125,7 +131,7 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
-        log.info("Default users created: admin/admin123 (SUPER_ADMIN), user/user123 (USER)");
+        log.info("Default users created: admin/admin123 (SUPER_ADMIN), user/user123 (MEMBER)");
     }
 
     private void initMenuItems() {
@@ -147,23 +153,23 @@ public class DataInitializer implements CommandLineRunner {
         menuItemRepository.save(MenuItem.builder().label("Dashboard").url("/admin").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(1).visible(true).requiredPermission("VIEW_STATS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Users").url("/admin/users").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(2).visible(true).requiredPermission("MANAGE_USERS").systemItem(true).createdBy("system").build());
+                .displayOrder(2).visible(true).requiredPermission("USER_MANAGE").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("All Bookmarks").url("/admin/bookmarks").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(3).visible(true).requiredPermission("MANAGE_BOOKMARKS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Tag Management").url("/admin/tags").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(4).visible(true).requiredPermission("MANAGE_TAGS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Audit Log").url("/admin/audit").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(6).visible(true).requiredPermission("VIEW_AUDIT_LOG").systemItem(true).createdBy("system").build());
+                .displayOrder(6).visible(true).requiredPermission("AUDIT_VIEW").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Menu Management").url("/admin/menus").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(7).visible(true).requiredPermission("MANAGE_MENUS").systemItem(true).createdBy("system").build());
+                .displayOrder(7).visible(true).requiredPermission("MENU_MANAGE").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Permissions").url("/admin/permissions").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(8).visible(true).requiredRole(Role.SUPER_ADMIN).systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Comments").url("/admin/comments").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(5).visible(true).requiredPermission("MODERATE_COMMENTS").systemItem(true).createdBy("system").build());
+                .displayOrder(5).visible(true).requiredPermission("COMMENT_HIDE").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Invitations").url("/admin/invitations").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(5).visible(true).requiredPermission("MANAGE_INVITATIONS").systemItem(true).createdBy("system").build());
+                .displayOrder(5).visible(true).requiredPermission("INVITE_ISSUE").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Backup / Restore").url("/admin/backup").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(9).visible(true).requiredPermission("MANAGE_BACKUP").systemItem(true).createdBy("system").build());
+                .displayOrder(9).visible(true).requiredPermission("BACKUP_RUN").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("QnA Management").url("/admin/qna").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(10).visible(true).requiredPermission("MANAGE_QNA").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Announcements").url("/admin/announcements").menuType(MenuType.ADMIN_SIDEBAR)
@@ -186,7 +192,7 @@ public class DataInitializer implements CommandLineRunner {
                 .maxUses(1)
                 .active(true)
                 .note("Default test invitation code")
-                .assignedRole(Role.USER)
+                .assignedRole(Role.MEMBER)
                 .build();
         invitationCodeRepository.save(code);
 

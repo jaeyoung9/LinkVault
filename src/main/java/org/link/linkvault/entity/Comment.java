@@ -43,6 +43,9 @@ public class Comment {
     @OrderBy("createdAt ASC")
     private List<Comment> replies = new ArrayList<>();
 
+    @Column(length = 2000)
+    private String originalContent;
+
     @Column(nullable = false)
     private boolean deleted = false;
 
@@ -84,8 +87,17 @@ public class Comment {
     }
 
     public void softDelete() {
+        this.originalContent = this.content;
         this.deleted = true;
         this.content = "[deleted]";
+    }
+
+    public void restore() {
+        if (this.originalContent != null) {
+            this.content = this.originalContent;
+            this.originalContent = null;
+        }
+        this.deleted = false;
     }
 
     public void incrementLikeCount() {

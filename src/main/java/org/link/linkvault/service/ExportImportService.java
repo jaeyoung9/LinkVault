@@ -39,7 +39,7 @@ public class ExportImportService {
     @Transactional(readOnly = true)
     public String exportToJson(User currentUser) throws Exception {
         List<Bookmark> bookmarks;
-        if (currentUser.getRole() == Role.ADMIN) {
+        if (currentUser.getRole() == Role.COMMUNITY_ADMIN) {
             bookmarks = bookmarkRepository.findAllWithTagsAndFolder();
         } else {
             bookmarks = bookmarkRepository.findByUserId(currentUser.getId(), Pageable.unpaged()).getContent();
@@ -108,7 +108,7 @@ public class ExportImportService {
     @Transactional(readOnly = true)
     public String exportToHtml(User currentUser) {
         List<Bookmark> bookmarks;
-        if (currentUser.getRole() == Role.ADMIN) {
+        if (currentUser.getRole() == Role.COMMUNITY_ADMIN) {
             bookmarks = bookmarkRepository.findAllWithTagsAndFolder();
         } else {
             bookmarks = bookmarkRepository.findByUserId(currentUser.getId(), Pageable.unpaged()).getContent();

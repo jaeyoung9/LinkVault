@@ -24,7 +24,7 @@ public class FolderService {
 
     private boolean isAdmin(User user) {
         return user.getRole() == Role.SUPER_ADMIN
-                || user.getRole() == Role.ADMIN
+                || user.getRole() == Role.COMMUNITY_ADMIN
                 || user.getRole() == Role.MODERATOR;
     }
 
