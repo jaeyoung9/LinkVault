@@ -11,8 +11,11 @@
            sec:authentication="name">user</p>
     </div>
 
-    <div class="sidebar-section">
-        <a href="/" class="sidebar-link">All Bookmarks</a>
+    <!-- Dynamic Menu Items -->
+    <div class="sidebar-section" th:if="${sidebarMenuItems != null and !sidebarMenuItems.isEmpty()}">
+        <th:block th:each="item : ${sidebarMenuItems}">
+            <div th:replace="~{fragments/layout :: menuItem(${item})}"></div>
+        </th:block>
     </div>
 
     <div class="sidebar-section">
@@ -37,9 +40,6 @@
     </div>
 
     <div class="sidebar-section" style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px;">
-        <div sec:authorize="hasRole('ADMIN')">
-            <a href="/admin" class="sidebar-link" style="color: var(--warning);">Admin Panel</a>
-        </div>
         <a href="/api/data/export/json" class="sidebar-link">Export JSON</a>
         <a href="/api/data/export/html" class="sidebar-link">Export HTML</a>
         <a href="/import" class="sidebar-link">Import</a>
@@ -48,6 +48,18 @@
                 Logout
             </button>
         </form>
+    </div>
+</div>
+
+<!-- Dynamic Menu Item Fragment (recursive) -->
+<div th:fragment="menuItem(item)">
+    <a th:href="${item.url}" class="sidebar-link"
+       th:style="${item.url.startsWith('/admin')} ? 'color: var(--warning);' : ''"
+       th:text="${item.label}">Menu Item</a>
+    <div class="menu-children" th:if="${item.children != null and !item.children.isEmpty()}">
+        <th:block th:each="child : ${item.children}">
+            <div th:replace="~{fragments/layout :: menuItem(${child})}"></div>
+        </th:block>
     </div>
 </div>
 
@@ -91,6 +103,10 @@
         <div class="bookmark-stats">
             <span th:if="${bookmark.folderName != null}" th:text="'Folder: ' + ${bookmark.folderName}"></span>
             <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
+            <a th:if="${bookmark.commentCount != null and bookmark.commentCount > 0}"
+               th:href="@{'/bookmark/' + ${bookmark.id}}"
+               style="color: var(--text-muted); text-decoration: none;"
+               th:text="'Comments: ' + ${bookmark.commentCount}">Comments: 0</a>
         </div>
     </div>
 </div>

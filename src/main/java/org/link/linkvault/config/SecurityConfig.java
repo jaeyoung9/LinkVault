@@ -38,9 +38,9 @@ public class SecurityConfig {
         http
             .authenticationProvider(authenticationProvider())
             .authorizeRequests()
-                .antMatchers("/css/**", "/js/**", "/login", "/error").permitAll()
-                .antMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
-                .antMatchers("/h2-console/**").hasRole("ADMIN")
+                .antMatchers("/css/**", "/js/**", "/login", "/register", "/api/auth/**", "/error").permitAll()
+                .antMatchers("/admin/**", "/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "MODERATOR")
+                .antMatchers("/h2-console/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                 .anyRequest().authenticated()
             .and()
             .formLogin()

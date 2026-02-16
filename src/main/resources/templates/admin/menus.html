@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Menu Management - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Menu Management</h2>
+            <button class="btn btn-primary" onclick="openMenuModal()">+ New Menu Item</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+            <button class="btn menu-tab active" onclick="switchTab('SIDEBAR', this)">User Sidebar</button>
+            <button class="btn menu-tab" onclick="switchTab('ADMIN_SIDEBAR', this)">Admin Sidebar</button>
+        </div>
+
+        <table class="data-table" id="menuTable">
+            <thead>
+            <tr>
+                <th>Order</th>
+                <th>Label</th>
+                <th>URL</th>
+                <th>Required Role</th>
+                <th>Required Permission</th>
+                <th>Visible</th>
+                <th>System</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="menuBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Menu Modal -->
+<div id="menuModal" class="modal-overlay" onclick="if(event.target===this)closeMenuModal()">
+    <div class="modal">
+        <h3 id="menuModalTitle">New Menu Item</h3>
+        <form id="menuForm" onsubmit="saveMenu(event)">
+            <input type="hidden" id="menuId"/>
+            <div class="form-group">
+                <label for="menuLabel">Label *</label>
+                <input type="text" id="menuLabel" class="form-control" placeholder="Menu label" required/>
+            </div>
+            <div class="form-group">
+                <label for="menuUrl">URL *</label>
+                <input type="text" id="menuUrl" class="form-control" placeholder="/path" required/>
+            </div>
+            <div class="form-group">
+                <label for="menuIcon">Icon</label>
+                <input type="text" id="menuIcon" class="form-control" placeholder="Optional icon class"/>
+            </div>
+            <div class="form-group">
+                <label for="menuRequiredRole">Required Role</label>
+                <select id="menuRequiredRole" class="form-control">
+                    <option value="">-- None --</option>
+                    <option value="USER">USER</option>
+                    <option value="MODERATOR">MODERATOR</option>
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="menuRequiredPermission">Required Permission</label>
+                <input type="text" id="menuRequiredPermission" class="form-control" placeholder="e.g. MANAGE_USERS"/>
+            </div>
+            <div class="form-group">
+                <label for="menuOrder">Display Order</label>
+                <input type="number" id="menuOrder" class="form-control" value="0"/>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeMenuModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+var currentMenuType = 'SIDEBAR';
+
+function switchTab(type, btn) {
+    currentMenuType = type;
+    document.querySelectorAll('.menu-tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    loadMenuItems();
+}
+
+function loadMenuItems() {
+    fetch('/api/admin/menus?menuType=' + currentMenuType)
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            var tbody = document.getElementById('menuBody');
+            tbody.innerHTML = '';
+            renderMenuRows(items, tbody, 0);
+        })
+        .catch(function() { showToast('Error loading menus', 'error'); });
+}
+
+function renderMenuRows(items, tbody, depth) {
+    items.forEach(function(item) {
+        var tr = document.createElement('tr');
+        var indent = depth > 0 ? 'padding-left:' + (depth * 20) + 'px;' : '';
+        tr.innerHTML =
+            '<td>' + item.displayOrder + '</td>' +
+            '<td style="' + indent + '">' + item.label + '</td>' +
+            '<td style="font-size:0.78rem;color:var(--text-muted);">' + item.url + '</td>' +
+            '<td>' + (item.requiredRole || '-') + '</td>' +
+            '<td>' + (item.requiredPermission || '-') + '</td>' +
+            '<td><span class="badge ' + (item.visible ? 'badge-success' : 'badge-danger') + '">' +
+            (item.visible ? 'Yes' : 'No') + '</span></td>' +
+            '<td>' + (item.systemItem ? '<span class="badge badge-info">System</span>' : '-') + '</td>' +
+            '<td>' +
+            '<button class="btn btn-sm btn-outline" onclick="editMenu(' + JSON.stringify(item).replace(/"/g, '&quot;') + ')">Edit</button> ' +
+            '<button class="btn btn-sm btn-outline" onclick="toggleMenuVis(' + item.id + ')">' + (item.visible ? 'Hide' : 'Show') + '</button> ' +
+            (!item.systemItem ? '<button class="btn btn-sm btn-danger" onclick="deleteMenu(' + item.id + ')">Del</button>' : '') +
+            '</td>';
+        tbody.appendChild(tr);
+        if (item.children && item.children.length > 0) {
+            renderMenuRows(item.children, tbody, depth + 1);
+        }
+    });
+}
+
+function openMenuModal() {
+    document.getElementById('menuModal').classList.add('active');
+    document.getElementById('menuModalTitle').textContent = 'New Menu Item';
+    document.getElementById('menuForm').reset();
+    document.getElementById('menuId').value = '';
+}
+
+function closeMenuModal() {
+    document.getElementById('menuModal').classList.remove('active');
+}
+
+function editMenu(item) {
+    document.getElementById('menuModal').classList.add('active');
+    document.getElementById('menuModalTitle').textContent = 'Edit Menu Item';
+    document.getElementById('menuId').value = item.id;
+    document.getElementById('menuLabel').value = item.label;
+    document.getElementById('menuUrl').value = item.url;
+    document.getElementById('menuIcon').value = item.icon || '';
+    document.getElementById('menuRequiredRole').value = item.requiredRole || '';
+    document.getElementById('menuRequiredPermission').value = item.requiredPermission || '';
+    document.getElementById('menuOrder').value = item.displayOrder;
+}
+
+function saveMenu(event) {
+    event.preventDefault();
+    var id = document.getElementById('menuId').value;
+    var data = {
+        label: document.getElementById('menuLabel').value,
+        url: document.getElementById('menuUrl').value,
+        icon: document.getElementById('menuIcon').value || null,
+        menuType: currentMenuType,
+        requiredRole: document.getElementById('menuRequiredRole').value || null,
+        requiredPermission: document.getElementById('menuRequiredPermission').value || null,
+        displayOrder: parseInt(document.getElementById('menuOrder').value) || 0
+    };
+
+    var method = id ? 'PUT' : 'POST';
+    var url = id ? '/api/admin/menus/' + id : '/api/admin/menus';
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw e; });
+        return r.json();
+    })
+    .then(function() {
+        closeMenuModal();
+        showToast(id ? 'Menu item updated' : 'Menu item created');
+        loadMenuItems();
+    })
+    .catch(function(err) {
+        showToast(err.message || 'Error saving menu item', 'error');
+    });
+}
+
+function toggleMenuVis(id) {
+    fetch('/api/admin/menus/' + id + '/toggle', { method: 'PATCH' })
+        .then(function() { showToast('Visibility toggled'); loadMenuItems(); })
+        .catch(function() { showToast('Error toggling visibility', 'error'); });
+}
+
+function deleteMenu(id) {
+    if (!confirm('Delete this menu item?')) return;
+    fetch('/api/admin/menus/' + id, { method: 'DELETE' })
+        .then(function() { showToast('Menu item deleted'); loadMenuItems(); })
+        .catch(function() { showToast('Error deleting menu item', 'error'); });
+}
+
+// Load on page ready
+document.addEventListener('DOMContentLoaded', loadMenuItems);
+</script>
+</body>
+</html>

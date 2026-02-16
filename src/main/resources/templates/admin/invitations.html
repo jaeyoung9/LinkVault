@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Invitation Codes - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Invitation Codes</h2>
+            <button class="btn btn-primary" onclick="openInvModal()">+ Generate Code</button>
+        </div>
+
+        <table class="data-table" id="invTable">
+            <thead>
+            <tr>
+                <th>Code</th>
+                <th>Created By</th>
+                <th>Uses</th>
+                <th>Role</th>
+                <th>Expires</th>
+                <th>Note</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="invBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Generate Code Modal -->
+<div id="invModal" class="modal-overlay" onclick="if(event.target===this)closeInvModal()">
+    <div class="modal">
+        <h3>Generate Invitation Code</h3>
+        <form id="invForm" onsubmit="generateCode(event)">
+            <div class="form-group">
+                <label for="invMaxUses">Max Uses</label>
+                <input type="number" id="invMaxUses" class="form-control" value="1" min="1"/>
+            </div>
+            <div class="form-group">
+                <label for="invExpiry">Expires In (hours, 0 = never)</label>
+                <input type="number" id="invExpiry" class="form-control" value="0" min="0"/>
+            </div>
+            <div class="form-group">
+                <label for="invRole">Assigned Role</label>
+                <select id="invRole" class="form-control">
+                    <option value="USER">USER</option>
+                    <option value="MODERATOR">MODERATOR</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="invNote">Note</label>
+                <input type="text" id="invNote" class="form-control" placeholder="Optional note"/>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeInvModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Generate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function loadInvitations() {
+    fetch('/api/admin/invitations')
+        .then(function(r) { return r.json(); })
+        .then(function(codes) {
+            var tbody = document.getElementById('invBody');
+            tbody.innerHTML = '';
+            codes.forEach(function(c) {
+                var tr = document.createElement('tr');
+                var statusBadge = c.usable
+                    ? '<span class="badge badge-success">Usable</span>'
+                    : '<span class="badge badge-danger">' + (c.active ? 'Expired/Full' : 'Inactive') + '</span>';
+                tr.innerHTML =
+                    '<td><code style="background:var(--bg-card);padding:2px 8px;border-radius:4px;cursor:pointer;" onclick="copyCode(\'' + c.code + '\')">' + c.code + '</code></td>' +
+                    '<td>' + (c.createdByUsername || '-') + '</td>' +
+                    '<td>' + c.currentUses + ' / ' + (c.maxUses > 0 ? c.maxUses : 'unlimited') + '</td>' +
+                    '<td><span class="badge badge-info">' + (c.assignedRole || 'USER') + '</span></td>' +
+                    '<td>' + (c.expiresAt ? c.expiresAt.replace('T', ' ').substring(0, 16) : 'Never') + '</td>' +
+                    '<td style="font-size:0.78rem;">' + (c.note || '-') + '</td>' +
+                    '<td>' + statusBadge + '</td>' +
+                    '<td>' +
+                    '<button class="btn btn-sm btn-outline" onclick="toggleInv(' + c.id + ')">' + (c.active ? 'Deactivate' : 'Activate') + '</button> ' +
+                    '<button class="btn btn-sm btn-danger" onclick="deleteInv(' + c.id + ')">Del</button>' +
+                    '</td>';
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(function() { showToast('Error loading invitations', 'error'); });
+}
+
+function openInvModal() { document.getElementById('invModal').classList.add('active'); }
+function closeInvModal() { document.getElementById('invModal').classList.remove('active'); }
+
+function generateCode(event) {
+    event.preventDefault();
+    var data = {
+        maxUses: parseInt(document.getElementById('invMaxUses').value) || 1,
+        expiresInHours: parseInt(document.getElementById('invExpiry').value) || null,
+        assignedRole: document.getElementById('invRole').value,
+        note: document.getElementById('invNote').value || null
+    };
+
+    fetch('/api/admin/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+        closeInvModal();
+        showToast('Code generated: ' + result.code);
+        loadInvitations();
+    })
+    .catch(function() { showToast('Error generating code', 'error'); });
+}
+
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(function() {
+        showToast('Code copied: ' + code);
+    });
+}
+
+function toggleInv(id) {
+    fetch('/api/admin/invitations/' + id + '/toggle', { method: 'PATCH' })
+        .then(function() { showToast('Invitation toggled'); loadInvitations(); })
+        .catch(function() { showToast('Error toggling invitation', 'error'); });
+}
+
+function deleteInv(id) {
+    if (!confirm('Delete this invitation code?')) return;
+    fetch('/api/admin/invitations/' + id, { method: 'DELETE' })
+        .then(function() { showToast('Invitation deleted'); loadInvitations(); })
+        .catch(function() { showToast('Error deleting invitation', 'error'); });
+}
+
+document.addEventListener('DOMContentLoaded', loadInvitations);
+</script>
+</body>
+</html>

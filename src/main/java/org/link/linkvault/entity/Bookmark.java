@@ -58,6 +58,9 @@ public class Bookmark {
     @Column(nullable = false)
     private int accessCount = 0;
 
+    @Column(nullable = false)
+    private int commentCount = 0;
+
     private LocalDateTime lastAccessedAt;
 
     @Column(nullable = false, updatable = false)
@@ -116,5 +119,13 @@ public class Bookmark {
     public void removeTag(Tag tag) {
         this.tags.remove(tag);
         tag.getBookmarks().remove(this);
+    }
+
+    public void incrementCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decrementCommentCount() {
+        if (this.commentCount > 0) this.commentCount--;
     }
 }

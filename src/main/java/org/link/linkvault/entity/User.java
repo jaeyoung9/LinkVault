@@ -33,7 +33,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 20)
     private Role role;
 
     @Column(nullable = false)
@@ -74,6 +74,10 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public void updateRole(Role role) {
+        this.role = role;
     }
 
     public void recordLogin() {

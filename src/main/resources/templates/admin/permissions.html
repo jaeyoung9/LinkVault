@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Permission Management - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Permission Management</h2>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label for="roleSelect" style="font-weight: 600;">Select Role:</label>
+            <select id="roleSelect" class="form-control" style="width: 240px; display: inline-block; margin-left: 8px;" onchange="loadPermissions()">
+                <option value="">-- Select Role --</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="MODERATOR">MODERATOR</option>
+                <option value="USER">USER</option>
+            </select>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                SUPER_ADMIN has all permissions implicitly and cannot be modified.
+            </p>
+        </div>
+
+        <table class="data-table" id="permissionsTable" style="display: none;">
+            <thead>
+            <tr>
+                <th>Permission</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Granted</th>
+            </tr>
+            </thead>
+            <tbody id="permissionsBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function loadPermissions() {
+    var role = document.getElementById('roleSelect').value;
+    var table = document.getElementById('permissionsTable');
+    var tbody = document.getElementById('permissionsBody');
+
+    if (!role) {
+        table.style.display = 'none';
+        return;
+    }
+
+    fetch('/api/admin/permissions/' + role)
+        .then(function(r) { return r.json(); })
+        .then(function(permissions) {
+            tbody.innerHTML = '';
+            permissions.forEach(function(p) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td style="font-weight:600;">' + p.name + '</td>' +
+                    '<td>' + (p.description || '') + '</td>' +
+                    '<td><span class="badge badge-info">' + (p.category || '') + '</span></td>' +
+                    '<td><label class="toggle-label"><input type="checkbox" ' +
+                    (p.granted ? 'checked' : '') +
+                    ' onchange="togglePermission(\'' + role + '\', ' + p.id + ', this.checked)"/> ' +
+                    (p.granted ? 'Yes' : 'No') + '</label></td>';
+                tbody.appendChild(tr);
+            });
+            table.style.display = '';
+        })
+        .catch(function() { showToast('Error loading permissions', 'error'); });
+}
+
+function togglePermission(role, permissionId, granted) {
+    fetch('/api/admin/permissions/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: role, permissionId: permissionId, granted: granted })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw e; });
+        return r.json();
+    })
+    .then(function() {
+        showToast('Permission updated');
+        loadPermissions();
+    })
+    .catch(function(err) {
+        showToast(err.message || 'Error updating permission', 'error');
+        loadPermissions();
+    });
+}
+</script>
+</body>
+</html>

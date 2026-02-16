@@ -6,6 +6,7 @@ import org.link.linkvault.entity.Role;
 import org.link.linkvault.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -19,6 +20,7 @@ public class UserResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
     private long bookmarkCount;
+    private List<String> permissions;
 
     public static UserResponseDto from(User user, long bookmarkCount) {
         return UserResponseDto.builder()

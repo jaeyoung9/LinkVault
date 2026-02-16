@@ -3,6 +3,8 @@ package org.link.linkvault.controller;
 import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.BookmarkResponseDto;
 import org.link.linkvault.dto.FolderResponseDto;
+import org.link.linkvault.entity.Bookmark;
+import org.link.linkvault.repository.BookmarkRepository;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.service.BookmarkService;
 import org.link.linkvault.service.FolderService;
@@ -26,6 +28,7 @@ import java.util.List;
 public class WebController {
 
     private final BookmarkService bookmarkService;
+    private final BookmarkRepository bookmarkRepository;
     private final FolderService folderService;
     private final TagService tagService;
     private final UserService userService;
@@ -33,6 +36,11 @@ public class WebController {
     @GetMapping("/login")
     public String login() {
         return "login";
+    }
+
+    @GetMapping("/register")
+    public String register() {
+        return "register";
     }
 
     @GetMapping("/")
@@ -93,6 +101,20 @@ public class WebController {
         model.addAttribute("keyword", keyword);
         model.addAttribute("pageTitle", "Search: " + keyword);
         return "search";
+    }
+
+    @GetMapping("/bookmark/{id}")
+    public String bookmarkDetail(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id, Model model) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        Bookmark bookmark = bookmarkRepository.findById(id)
+                .orElseThrow(() -> new org.link.linkvault.exception.ResourceNotFoundException("Bookmark not found: " + id));
+        populateCommonModel(model, currentUser);
+        model.addAttribute("bookmark", BookmarkResponseDto.from(bookmark));
+        model.addAttribute("pageTitle", bookmark.getTitle());
+        model.addAttribute("currentUserId", currentUser.getId());
+        return "bookmark";
     }
 
     @GetMapping("/import")

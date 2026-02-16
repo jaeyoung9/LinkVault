@@ -12,12 +12,21 @@
     </div>
 
     <div class="sidebar-section">
-        <a href="/admin" class="sidebar-link">Dashboard</a>
-        <a href="/admin/users" class="sidebar-link">Users</a>
-        <a href="/admin/bookmarks" class="sidebar-link">All Bookmarks</a>
-        <a href="/admin/tags" class="sidebar-link">Tag Management</a>
-        <a href="/admin/audit" class="sidebar-link">Audit Log</a>
-        <a href="/admin/backup" class="sidebar-link">Backup / Restore</a>
+        <th:block th:if="${adminMenuItems != null and !adminMenuItems.isEmpty()}">
+            <th:block th:each="item : ${adminMenuItems}">
+                <a th:href="${item.url}" class="sidebar-link" th:text="${item.label}">Menu Item</a>
+            </th:block>
+        </th:block>
+        <!-- Fallback if no dynamic menus yet -->
+        <th:block th:if="${adminMenuItems == null or adminMenuItems.isEmpty()}">
+            <a href="/admin" class="sidebar-link" sec:authorize="hasAuthority('VIEW_STATS')">Dashboard</a>
+            <a href="/admin/users" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_USERS')">Users</a>
+            <a href="/admin/bookmarks" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_BOOKMARKS')">All Bookmarks</a>
+            <a href="/admin/tags" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_TAGS')">Tag Management</a>
+            <a href="/admin/audit" class="sidebar-link" sec:authorize="hasAuthority('VIEW_AUDIT_LOG')">Audit Log</a>
+            <a href="/admin/backup" class="sidebar-link" sec:authorize="hasAuthority('MANAGE_BACKUP')">Backup / Restore</a>
+            <a href="/admin/permissions" class="sidebar-link" sec:authorize="hasRole('ROLE_SUPER_ADMIN')">Permissions</a>
+        </th:block>
     </div>
 
     <div class="sidebar-section" style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px;">

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${pageTitle} + ' - LinkVault'">Bookmark - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <!-- Bookmark Info -->
+        <div class="bookmark-detail">
+            <div class="bookmark-header" style="margin-bottom: 12px;">
+                <img th:if="${bookmark.favicon != null and !bookmark.favicon.isEmpty()}"
+                     th:src="${bookmark.favicon}" class="bookmark-favicon" alt=""
+                     onerror="this.style.display='none'"/>
+                <h2 style="flex:1;" th:text="${bookmark.title}">Title</h2>
+            </div>
+            <a th:href="${bookmark.url}" target="_blank" style="font-size: 0.85rem; word-break: break-all;"
+               th:text="${bookmark.url}">https://example.com</a>
+            <p th:if="${bookmark.description != null and !bookmark.description.isEmpty()}"
+               style="margin-top: 12px; color: var(--text-secondary);"
+               th:text="${bookmark.description}">Description</p>
+            <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <a th:each="tag : ${bookmark.tagNames}" th:href="@{'/tag/' + ${tag}}" class="tag-badge" th:text="${tag}">tag</a>
+            </div>
+            <div style="margin-top: 8px; font-size: 0.78rem; color: var(--text-muted);">
+                <span th:if="${bookmark.folderName != null}" th:text="'Folder: ' + ${bookmark.folderName}"></span>
+                <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
+                <span th:text="'Comments: ' + ${bookmark.commentCount}">Comments: 0</span>
+            </div>
+        </div>
+
+        <!-- Comment Section -->
+        <div class="comment-section" style="margin-top: 32px;">
+            <h3 style="margin-bottom: 16px;">Comments</h3>
+
+            <!-- New Comment Form -->
+            <div class="comment-form" style="margin-bottom: 24px;">
+                <textarea id="newCommentContent" class="form-control" placeholder="Write a comment..." rows="3"></textarea>
+                <div style="margin-top: 8px; text-align: right;">
+                    <button class="btn btn-primary" onclick="submitComment()">Post Comment</button>
+                </div>
+            </div>
+
+            <!-- Comments Container -->
+            <div id="commentsContainer">
+                <div class="empty-state" id="noComments">
+                    <h3>No comments yet</h3>
+                    <p>Be the first to comment on this bookmark.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: bookmarkModal}"></div>
+<div th:replace="~{fragments/layout :: folderModal}"></div>
+
+<script th:src="@{/js/app.js}"></script>
+<script th:inline="javascript">
+var bookmarkId = /*[[${bookmark.id}]]*/ 0;
+var currentUserId = /*[[${currentUserId}]]*/ 0;
+</script>
+<script th:src="@{/js/comment.js}"></script>
+</body>
+</html>

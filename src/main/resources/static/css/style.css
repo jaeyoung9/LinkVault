@@ -532,3 +532,78 @@ select.form-control { cursor: pointer; }
 .badge-danger { background: rgba(239,68,68,0.2); color: var(--danger); }
 .badge-warning { background: rgba(245,158,11,0.2); color: var(--warning); }
 .badge-info { background: rgba(59,130,246,0.2); color: var(--accent); }
+.badge-purple { background: rgba(168,85,247,0.2); color: #a855f7; }
+.badge-orange { background: rgba(249,115,22,0.2); color: #f97316; }
+
+/* ===== Menu Management ===== */
+.menu-children { padding-left: 16px; }
+.menu-tab {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+.menu-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* ===== Comments ===== */
+.bookmark-detail {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+}
+.comment-section { max-width: 800px; }
+.comment-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+}
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+}
+.comment-header strong { color: var(--accent); }
+.comment-time { color: var(--text-muted); font-size: 0.75rem; }
+.comment-edited { color: var(--text-muted); font-size: 0.72rem; font-style: italic; }
+.comment-content {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+.comment-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.vote-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    padding: 2px 8px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.vote-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.vote-btn.vote-active { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.1); }
+.comment-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+.comment-action-btn:hover { color: var(--accent); }
+.reply-form { margin-top: 8px; padding-left: 16px; }

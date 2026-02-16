@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Comment Moderation - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Comment Moderation</h2>
+        </div>
+
+        <table class="data-table" id="commentsTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Content</th>
+                <th>Bookmark</th>
+                <th>Likes</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="commentsBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function loadComments() {
+    fetch('/api/admin/comments')
+        .then(function(r) { return r.json(); })
+        .then(function(comments) {
+            var tbody = document.getElementById('commentsBody');
+            tbody.innerHTML = '';
+            comments.forEach(function(c) {
+                var tr = document.createElement('tr');
+                var content = c.content.length > 80 ? c.content.substring(0, 80) + '...' : c.content;
+                var status = c.deleted
+                    ? '<span class="badge badge-danger">Deleted</span>'
+                    : (c.edited ? '<span class="badge badge-warning">Edited</span>' : '<span class="badge badge-success">Active</span>');
+                tr.innerHTML =
+                    '<td>' + c.id + '</td>' +
+                    '<td>' + c.username + '</td>' +
+                    '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + content + '</td>' +
+                    '<td><a href="/bookmark/' + c.bookmarkId + '">View</a></td>' +
+                    '<td>' + c.likeCount + ' / ' + c.dislikeCount + '</td>' +
+                    '<td>' + status + '</td>' +
+                    '<td>' + (c.createdAt ? c.createdAt.replace('T', ' ').substring(0, 16) : '-') + '</td>' +
+                    '<td>' +
+                    (!c.deleted ? '<button class="btn btn-sm btn-danger" onclick="moderateDelete(' + c.id + ')">Delete</button>' : '-') +
+                    '</td>';
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(function() { showToast('Error loading comments', 'error'); });
+}
+
+function moderateDelete(id) {
+    if (!confirm('Soft-delete this comment?')) return;
+    fetch('/api/admin/comments/' + id, { method: 'DELETE' })
+        .then(function() { showToast('Comment deleted'); loadComments(); })
+        .catch(function() { showToast('Error deleting comment', 'error'); });
+}
+
+document.addEventListener('DOMContentLoaded', loadComments);
+</script>
+</body>
+</html>

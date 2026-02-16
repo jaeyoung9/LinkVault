@@ -75,6 +75,10 @@ public class UserService {
             user.updatePassword(passwordEncoder.encode(dto.getPassword()));
         }
 
+        if (dto.getRole() != null) {
+            user.updateRole(dto.getRole());
+        }
+
         if (dto.getEnabled() != null) {
             user.setEnabled(dto.getEnabled());
         }

@@ -22,6 +22,7 @@ public class BookmarkResponseDto {
     private String folderName;
     private String ownerUsername;
     private int accessCount;
+    private int commentCount;
     private LocalDateTime lastAccessedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -40,6 +41,7 @@ public class BookmarkResponseDto {
                 .folderName(bookmark.getFolder() != null ? bookmark.getFolder().getName() : null)
                 .ownerUsername(bookmark.getUser() != null ? bookmark.getUser().getUsername() : null)
                 .accessCount(bookmark.getAccessCount())
+                .commentCount(bookmark.getCommentCount())
                 .lastAccessedAt(bookmark.getLastAccessedAt())
                 .createdAt(bookmark.getCreatedAt())
                 .updatedAt(bookmark.getUpdatedAt())
