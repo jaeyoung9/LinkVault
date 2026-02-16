@@ -23,4 +23,8 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
     Optional<Folder> findByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 
     List<Folder> findByParentIdOrderByDisplayOrderAsc(Long parentId);
+
+    List<Folder> findByNameContainingIgnoreCaseAndUserId(String name, Long userId);
+
+    List<Folder> findByNameContainingIgnoreCase(String name);
 }

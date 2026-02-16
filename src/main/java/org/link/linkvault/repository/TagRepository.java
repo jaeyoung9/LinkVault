@@ -21,4 +21,6 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 
     @Query("SELECT t FROM Tag t LEFT JOIN t.bookmarks b GROUP BY t ORDER BY COUNT(b) DESC")
     List<Tag> findAllOrderByBookmarkCountDesc();
+
+    List<Tag> findByNameContainingIgnoreCase(String name);
 }

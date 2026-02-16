@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>QnA Guide - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div style="margin-bottom: 16px;">
+            <a href="/qna" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to QnA Guide</a>
+        </div>
+
+        <div class="qna-detail-card" th:if="${article != null}">
+            <div class="qna-detail-header">
+                <h2 th:text="${article.question}">Question?</h2>
+                <div class="qna-detail-meta">
+                    <span class="badge badge-info" th:text="${article.category}">Category</span>
+                    <span class="qna-detail-version" th:text="'v' + ${article.version}">v1</span>
+                    <span th:if="${article.recentlyUpdated}" class="badge badge-success">Updated</span>
+                </div>
+            </div>
+
+            <div class="qna-detail-answer" th:utext="${article.answer}">
+                Answer content here...
+            </div>
+
+            <!-- Tags -->
+            <div class="qna-detail-tags" th:if="${article.tags != null and !article.tags.isEmpty()}">
+                <th:block th:each="tag : ${article.tags.split(',')}">
+                    <span class="tag-badge" th:text="${tag.trim()}">tag</span>
+                </th:block>
+            </div>
+
+            <!-- Related Links -->
+            <div class="qna-detail-links" th:if="${article.relatedLinks != null and !article.relatedLinks.isEmpty()}">
+                <h4>Related Links</h4>
+                <th:block th:each="link : ${article.relatedLinks.split('\n')}">
+                    <a th:href="${link.trim()}" th:text="${link.trim()}" target="_blank"
+                       class="qna-related-link" th:if="${!link.isBlank()}"></a>
+                </th:block>
+            </div>
+
+            <!-- Feedback Section -->
+            <div class="qna-feedback-section">
+                <p>Was this helpful?</p>
+                <div class="qna-feedback-buttons">
+                    <button class="qna-feedback-btn" id="feedbackHelpful"
+                            th:classappend="${feedback != null and feedback.userFeedback != null and feedback.userFeedback} ? ' active-helpful'"
+                            onclick="submitQnaFeedback(true)">
+                        &#128077; Helpful
+                        <span id="helpfulCount" th:text="${feedback != null} ? ${feedback.helpfulCount} : ${article.helpfulCount}">0</span>
+                    </button>
+                    <button class="qna-feedback-btn" id="feedbackNotHelpful"
+                            th:classappend="${feedback != null and feedback.userFeedback != null and !feedback.userFeedback} ? ' active-not-helpful'"
+                            onclick="submitQnaFeedback(false)">
+                        &#128078; Not Helpful
+                        <span id="notHelpfulCount" th:text="${feedback != null} ? ${feedback.notHelpfulCount} : ${article.notHelpfulCount}">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: searchModal}"></div>
+<script th:src="@{/js/app.js}"></script>
+<script th:inline="javascript">
+var articleId = /*[[${article.id}]]*/ 0;
+
+function submitQnaFeedback(helpful) {
+    fetch('/api/qna/' + articleId + '/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ helpful: helpful })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('helpfulCount').textContent = data.helpfulCount;
+        document.getElementById('notHelpfulCount').textContent = data.notHelpfulCount;
+        // Update button states
+        var helpfulBtn = document.getElementById('feedbackHelpful');
+        var notHelpfulBtn = document.getElementById('feedbackNotHelpful');
+        helpfulBtn.classList.remove('active-helpful');
+        notHelpfulBtn.classList.remove('active-not-helpful');
+        if (data.userFeedback === true) helpfulBtn.classList.add('active-helpful');
+        if (data.userFeedback === false) notHelpfulBtn.classList.add('active-not-helpful');
+        showToast('Feedback submitted');
+    })
+    .catch(function() { showToast('Error submitting feedback', 'error'); });
+}
+</script>
+</body>
+</html>

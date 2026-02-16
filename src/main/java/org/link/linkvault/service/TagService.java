@@ -82,4 +82,10 @@ public class TagService {
         tagRepository.deleteAll(unused);
         return unused.size();
     }
+
+    public List<TagResponseDto> searchByName(String query) {
+        return tagRepository.findByNameContainingIgnoreCase(query).stream()
+                .map(TagResponseDto::from)
+                .collect(Collectors.toList());
+    }
 }

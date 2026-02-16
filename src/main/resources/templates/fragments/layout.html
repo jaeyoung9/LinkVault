@@ -2,13 +2,53 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
-<!-- Sidebar Fragment -->
-<div th:fragment="sidebar" class="sidebar">
+<!-- Sidebar Fragment (includes mobile hamburger + notification panel) -->
+<th:block th:fragment="sidebar">
+<script th:inline="javascript">
+(function(){var t=/*[[${currentTheme}]]*/'DARK';if(t==='LIGHT')document.body.classList.add('light-theme');else document.body.classList.remove('light-theme');localStorage.setItem('theme',t);})();
+</script>
+<button id="mobileMenuBtn" class="mobile-menu-btn" onclick="toggleMobileSidebar()">&#9776;</button>
+<div id="mobileOverlay" class="mobile-overlay" onclick="toggleMobileSidebar()"></div>
+
+<div class="sidebar">
     <div class="sidebar-header">
-        <h1>LinkVault</h1>
-        <p>Bookmark Manager</p>
-        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
+        <div class="sidebar-header-top">
+            <div class="sidebar-brand">
+                <h1>LinkVault</h1>
+                <p class="sidebar-brand-sub">Bookmark Manager</p>
+            </div>
+            <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
+        </div>
+        <p class="sidebar-username" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
            sec:authentication="name">user</p>
+
+        <!-- Sidebar header icons: Search + Notifications -->
+        <div class="sidebar-header-icons">
+            <button class="sidebar-icon-btn" onclick="openSearchModal()" title="Search (Ctrl+K)">
+                &#128269; <span class="sidebar-icon-label">Ctrl+K</span>
+            </button>
+            <button class="sidebar-icon-btn notification-bell-btn" onclick="toggleNotificationPanel()" title="Notifications">
+                &#128276;
+                <span class="notification-badge" th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
+                      th:text="${unreadNotificationCount}">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Favorites Section -->
+    <div class="sidebar-section favorites-section" th:if="${favorites != null and !favorites.isEmpty()}">
+        <h3>&#9733; Favorites</h3>
+        <div id="favoritesContainer">
+            <div th:each="fav : ${favorites}" class="favorite-item" draggable="true"
+                 th:data-bookmark-id="${fav.bookmarkId}">
+                <a th:href="@{'/bookmark/' + ${fav.bookmarkId}}" class="sidebar-link">
+                    <img th:if="${fav.bookmarkFavicon != null and !fav.bookmarkFavicon.isEmpty()}"
+                         th:src="${fav.bookmarkFavicon}" style="width:16px;height:16px;border-radius:3px;" alt=""
+                         onerror="this.style.display='none'"/>
+                    <span class="sidebar-link-text" th:text="${fav.bookmarkTitle}">Favorite</span>
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- Dynamic Menu Items -->
@@ -21,17 +61,21 @@
     <div class="sidebar-section">
         <h3>Folders</h3>
         <div id="uncategorizedDrop">
-            <a href="/" class="sidebar-link">Uncategorized</a>
+            <a href="/" class="sidebar-link">
+                <span class="sidebar-link-text">Unsorted</span>
+            </a>
         </div>
         <th:block th:each="folder : ${folders}">
             <div th:replace="~{fragments/layout :: folderTree(${folder})}"></div>
         </th:block>
-        <a href="javascript:void(0)" onclick="openFolderModal()" class="sidebar-link" style="color: var(--accent);">+ New Folder</a>
+        <a href="javascript:void(0)" onclick="openFolderModal()" class="sidebar-link" style="color: var(--accent);">
+            <span class="sidebar-link-text">+ New Folder</span>
+        </a>
     </div>
 
     <div class="sidebar-section">
         <h3>Tags</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0;">
+        <div class="sidebar-tags-wrap" style="display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0;">
             <a th:each="tag : ${tags}" th:href="@{'/tag/' + ${tag.name}}" class="tag-badge">
                 <span th:text="${tag.name}">tag</span>
                 <span class="tag-count" th:text="${tag.bookmarkCount}">0</span>
@@ -40,22 +84,44 @@
     </div>
 
     <div class="sidebar-section" style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px;">
-        <a href="/api/data/export/json" class="sidebar-link">Export JSON</a>
-        <a href="/api/data/export/html" class="sidebar-link">Export HTML</a>
-        <a href="/import" class="sidebar-link">Import</a>
+        <a href="/qna" class="sidebar-link">
+            <span class="sidebar-link-text">QnA Guide</span>
+            <span class="sidebar-badge-dot" th:if="${qnaHasRecentUpdate}"></span>
+        </a>
+        <a href="/announcements" class="sidebar-link" style="position: relative;">
+            <span class="sidebar-link-text">Announcements</span>
+            <span class="sidebar-announcement-badge" th:if="${unreadAnnouncementCount != null and unreadAnnouncementCount > 0}"
+                  th:text="${unreadAnnouncementCount}">0</span>
+        </a>
+        <a href="/settings" class="sidebar-link"><span class="sidebar-link-text">Settings</span></a>
         <form th:action="@{/logout}" method="post" style="margin: 0;">
             <button type="submit" class="sidebar-link" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem; padding: 6px 12px;">
-                Logout
+                <span class="sidebar-link-text">Logout</span>
             </button>
         </form>
     </div>
 </div>
 
+<!-- Notification Panel (fixed position, outside sidebar to avoid overflow clipping) -->
+<div id="notificationPanel" class="notification-panel" style="display: none;">
+    <div class="notification-panel-header">
+        <strong>Notifications</strong>
+        <button class="comment-action-btn" onclick="markAllNotificationsRead()">Mark all read</button>
+    </div>
+    <div id="notificationList" class="notification-list">
+        <div class="empty-state" style="padding: 20px;">
+            <p style="font-size: 0.82rem;">No notifications</p>
+        </div>
+    </div>
+</div>
+</th:block>
+
 <!-- Dynamic Menu Item Fragment (recursive) -->
 <div th:fragment="menuItem(item)">
     <a th:href="${item.url}" class="sidebar-link"
-       th:style="${item.url.startsWith('/admin')} ? 'color: var(--warning);' : ''"
-       th:text="${item.label}">Menu Item</a>
+       th:style="${item.url.startsWith('/admin')} ? 'color: var(--warning);' : ''">
+        <span class="sidebar-link-text" th:text="${item.label}">Menu Item</span>
+    </a>
     <div class="menu-children" th:if="${item.children != null and !item.children.isEmpty()}">
         <th:block th:each="child : ${item.children}">
             <div th:replace="~{fragments/layout :: menuItem(${child})}"></div>
@@ -67,7 +133,7 @@
 <div th:fragment="folderTree(folder)">
     <div class="folder-item" th:data-folder-id="${folder.id}" draggable="false">
         <a th:href="@{'/folder/' + ${folder.id}}" class="sidebar-link">
-            <span th:text="${folder.name}">Folder</span>
+            <span class="sidebar-link-text" th:text="${folder.name}">Folder</span>
             <span class="tag-count" th:text="${folder.bookmarkCount}">0</span>
         </a>
         <div class="folder-children" th:if="${folder.children != null and !folder.children.isEmpty()}">
@@ -88,6 +154,10 @@
         <a href="javascript:void(0)" class="bookmark-title js-access-link"
            th:data-id="${bookmark.id}" th:data-url="${bookmark.url}"
            th:text="${bookmark.title}">Title</a>
+        <div class="bookmark-card-actions">
+            <button class="bookmark-icon-btn js-save-btn" th:data-id="${bookmark.id}" title="Save for later">&#128278;</button>
+            <button class="bookmark-icon-btn js-fav-btn" th:data-id="${bookmark.id}" title="Add to favorites">&#9734;</button>
+        </div>
         <div class="bookmark-actions"
              th:if="${bookmark.ownerUsername == currentUser}"
              sec:authorize="isAuthenticated()">
@@ -189,6 +259,23 @@
                 <button type="submit" class="btn btn-primary">Create</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Search Modal Fragment -->
+<div th:fragment="searchModal" id="searchModal" class="modal-overlay" onclick="if(event.target===this)closeSearchModal()">
+    <div class="search-modal">
+        <div class="search-modal-input-row">
+            <span style="font-size: 1.2rem;">&#128269;</span>
+            <input type="text" id="globalSearchInput" class="form-control" placeholder="Search bookmarks, tags, folders..."
+                   oninput="onGlobalSearchInput()" autocomplete="off"/>
+            <kbd class="search-kbd">ESC</kbd>
+        </div>
+        <div id="searchResults" class="search-results">
+            <div class="search-results-empty" style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                Type to search...
+            </div>
+        </div>
     </div>
 </div>
 

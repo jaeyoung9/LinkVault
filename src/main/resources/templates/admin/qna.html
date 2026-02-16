@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>QnA Management - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>QnA Management</h2>
+            <button class="btn btn-primary" onclick="openQnaModal()">+ New Article</button>
+        </div>
+
+        <table class="data-table" id="qnaTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Question</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Version</th>
+                <th>Helpful</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="qnaBody">
+            <tr th:each="article : ${articles.content}">
+                <td th:text="${article.id}">1</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    th:text="${article.question}">Question</td>
+                <td><span class="badge badge-info" th:text="${article.category}">Cat</span></td>
+                <td>
+                    <span class="badge" th:classappend="${article.status.name() == 'PUBLISHED'} ? 'badge-success' :
+                        (${article.status.name() == 'DRAFT'} ? 'badge-warning' :
+                        (${article.status.name() == 'REVIEW'} ? 'badge-info' : 'badge-danger'))"
+                          th:text="${article.status}">STATUS</span>
+                </td>
+                <td th:text="'v' + ${article.version}">v1</td>
+                <td th:text="${article.helpfulCount} + ' / ' + ${article.notHelpfulCount}">0 / 0</td>
+                <td>
+                    <button class="btn btn-sm btn-outline" th:onclick="'editQna(' + ${article.id} + ')'">Edit</button>
+                    <button class="btn btn-sm btn-primary" th:if="${article.status.name() == 'DRAFT'}"
+                            th:onclick="'changeQnaStatus(' + ${article.id} + ', \'REVIEW\')'">Review</button>
+                    <button class="btn btn-sm btn-primary" th:if="${article.status.name() == 'REVIEW'}"
+                            th:onclick="'changeQnaStatus(' + ${article.id} + ', \'PUBLISHED\')'">Publish</button>
+                    <button class="btn btn-sm btn-outline" th:if="${article.status.name() == 'PUBLISHED'}"
+                            th:onclick="'changeQnaStatus(' + ${article.id} + ', \'ARCHIVED\')'">Archive</button>
+                    <button class="btn btn-sm btn-danger" th:onclick="'deleteQna(' + ${article.id} + ')'">Del</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div th:if="${articles != null}" th:replace="~{fragments/layout :: pagination(${articles})}"></div>
+    </div>
+</div>
+
+<!-- QnA Modal -->
+<div id="qnaModal" class="modal-overlay" onclick="if(event.target===this)closeQnaModal()">
+    <div class="modal" style="width: 700px;">
+        <h3 id="qnaModalTitle">New QnA Article</h3>
+        <form id="qnaForm" onsubmit="saveQna(event)">
+            <input type="hidden" id="qnaId"/>
+            <div class="form-group">
+                <label for="qnaQuestion">Question *</label>
+                <input type="text" id="qnaQuestion" class="form-control" placeholder="How do I...?" required/>
+            </div>
+            <div class="form-group">
+                <label for="qnaAnswer">Answer * (HTML supported)</label>
+                <textarea id="qnaAnswer" class="form-control" rows="10" placeholder="Detailed answer..." required
+                          style="min-height: 200px;"></textarea>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label for="qnaCategory">Category *</label>
+                    <input type="text" id="qnaCategory" class="form-control" placeholder="e.g., Getting Started" required/>
+                </div>
+                <div class="form-group">
+                    <label for="qnaOrder">Display Order</label>
+                    <input type="number" id="qnaOrder" class="form-control" value="0"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="qnaTags">Tags (comma separated)</label>
+                <input type="text" id="qnaTags" class="form-control" placeholder="bookmark, folder, search"/>
+            </div>
+            <div class="form-group">
+                <label for="qnaLinks">Related Links (one per line)</label>
+                <textarea id="qnaLinks" class="form-control" rows="3" placeholder="https://example.com"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeQnaModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function openQnaModal() {
+    document.getElementById('qnaModal').classList.add('active');
+    document.getElementById('qnaModalTitle').textContent = 'New QnA Article';
+    document.getElementById('qnaForm').reset();
+    document.getElementById('qnaId').value = '';
+}
+
+function closeQnaModal() {
+    document.getElementById('qnaModal').classList.remove('active');
+}
+
+function editQna(id) {
+    fetch('/api/qna/' + id)
+        .then(function(r) { return r.json(); })
+        .then(function(a) {
+            document.getElementById('qnaModal').classList.add('active');
+            document.getElementById('qnaModalTitle').textContent = 'Edit QnA Article';
+            document.getElementById('qnaId').value = a.id;
+            document.getElementById('qnaQuestion').value = a.question;
+            document.getElementById('qnaAnswer').value = a.answer;
+            document.getElementById('qnaCategory').value = a.category;
+            document.getElementById('qnaOrder').value = a.displayOrder || 0;
+            document.getElementById('qnaTags').value = a.tags || '';
+            document.getElementById('qnaLinks').value = a.relatedLinks || '';
+        })
+        .catch(function() { showToast('Error loading article', 'error'); });
+}
+
+function saveQna(e) {
+    e.preventDefault();
+    var id = document.getElementById('qnaId').value;
+    var data = {
+        question: document.getElementById('qnaQuestion').value,
+        answer: document.getElementById('qnaAnswer').value,
+        category: document.getElementById('qnaCategory').value,
+        displayOrder: parseInt(document.getElementById('qnaOrder').value) || 0,
+        tags: document.getElementById('qnaTags').value,
+        relatedLinks: document.getElementById('qnaLinks').value
+    };
+
+    var method = id ? 'PUT' : 'POST';
+    var url = id ? '/api/admin/qna/' + id : '/api/admin/qna';
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function() {
+        closeQnaModal();
+        showToast(id ? 'Article updated' : 'Article created');
+        setTimeout(function() { location.reload(); }, 500);
+    })
+    .catch(function(err) { showToast(err.message || 'Error saving article', 'error'); });
+}
+
+function changeQnaStatus(id, status) {
+    fetch('/api/admin/qna/' + id + '/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error();
+        return r.json();
+    })
+    .then(function() {
+        showToast('Status updated to ' + status);
+        setTimeout(function() { location.reload(); }, 500);
+    })
+    .catch(function() { showToast('Error updating status', 'error'); });
+}
+
+function deleteQna(id) {
+    if (!confirm('Delete this article?')) return;
+    fetch('/api/admin/qna/' + id, { method: 'DELETE' })
+        .then(function() {
+            showToast('Article deleted');
+            setTimeout(function() { location.reload(); }, 500);
+        })
+        .catch(function() { showToast('Error deleting article', 'error'); });
+}
+</script>
+</body>
+</html>

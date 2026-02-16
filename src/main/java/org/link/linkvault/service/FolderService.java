@@ -139,6 +139,18 @@ public class FolderService {
         return FolderResponseDto.from(folder);
     }
 
+    public List<FolderResponseDto> searchByName(User user, String query) {
+        List<Folder> folders;
+        if (isAdmin(user)) {
+            folders = folderRepository.findByNameContainingIgnoreCase(query);
+        } else {
+            folders = folderRepository.findByNameContainingIgnoreCaseAndUserId(query, user.getId());
+        }
+        return folders.stream()
+                .map(FolderResponseDto::from)
+                .collect(Collectors.toList());
+    }
+
     public String buildFolderPath(Folder folder) {
         if (folder == null) return "";
         StringBuilder path = new StringBuilder(folder.getName());

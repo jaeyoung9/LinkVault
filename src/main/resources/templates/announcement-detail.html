@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Announcement - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div style="margin-bottom: 16px;">
+            <a href="/announcements" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Announcements</a>
+        </div>
+
+        <div class="announcement-detail-card" th:if="${announcement != null}">
+            <div class="announcement-detail-header">
+                <span class="announcement-priority-badge"
+                      th:classappend="'priority-' + ${announcement.priority.name().toLowerCase()}"
+                      th:text="${announcement.priority}">INFO</span>
+                <span class="announcement-pin" th:if="${announcement.pinned}">&#128204; Pinned</span>
+            </div>
+            <h2 th:text="${announcement.title}">Title</h2>
+            <div class="announcement-detail-meta">
+                <span>By <strong th:text="${announcement.createdByUsername}">admin</strong></span>
+                <span th:if="${announcement.startAt != null}"
+                      th:text="'Published: ' + ${#temporals.format(announcement.startAt, 'yyyy-MM-dd HH:mm')}"></span>
+            </div>
+
+            <div class="announcement-detail-content" th:utext="${announcement.content}">
+                Content here...
+            </div>
+
+            <!-- Acknowledge button for CRITICAL announcements -->
+            <div class="announcement-acknowledge" th:if="${announcement.priority.name() == 'CRITICAL' and !announcement.acknowledged}">
+                <p style="color: var(--danger); font-weight: 600; margin-bottom: 8px;">
+                    This is a critical announcement. Please acknowledge that you have read it.
+                </p>
+                <button class="btn btn-danger" th:onclick="'acknowledgeAnnouncement(' + ${announcement.id} + ')'">
+                    Acknowledge
+                </button>
+            </div>
+            <div th:if="${announcement.priority.name() == 'CRITICAL' and announcement.acknowledged}"
+                 style="margin-top: 16px; padding: 12px; background: rgba(34,197,94,0.1); border-radius: var(--radius); color: var(--success);">
+                &#10003; You have acknowledged this announcement.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: searchModal}"></div>
+<script th:src="@{/js/app.js}"></script>
+<script>
+function acknowledgeAnnouncement(id) {
+    fetch('/api/announcements/' + id + '/acknowledge', { method: 'POST' })
+        .then(function(r) {
+            if (!r.ok) throw new Error();
+            return r.json();
+        })
+        .then(function() {
+            showToast('Announcement acknowledged');
+            setTimeout(function() { location.reload(); }, 500);
+        })
+        .catch(function() { showToast('Error acknowledging announcement', 'error'); });
+}
+</script>
+</body>
+</html>

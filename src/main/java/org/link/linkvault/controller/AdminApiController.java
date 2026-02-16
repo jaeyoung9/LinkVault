@@ -31,6 +31,8 @@ public class AdminApiController {
     private final MenuService menuService;
     private final InvitationService invitationService;
     private final CommentService commentService;
+    private final QnaArticleService qnaArticleService;
+    private final AnnouncementService announcementService;
 
     // --- User CRUD ---
 
@@ -234,5 +236,73 @@ public class AdminApiController {
     public ResponseEntity<Map<String, String>> togglePermission(@Valid @RequestBody RolePermissionRequestDto dto) {
         permissionService.togglePermission(dto.getRole(), dto.getPermissionId(), dto.isGranted());
         return ResponseEntity.ok(Map.of("message", "Permission updated"));
+    }
+
+    // --- QnA Management ---
+
+    @PostMapping("/qna")
+    @PreAuthorize("hasAuthority('MANAGE_QNA')")
+    public ResponseEntity<QnaArticleResponseDto> createQnaArticle(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody QnaArticleRequestDto dto) {
+        User creator = userService.getUserEntity(userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(qnaArticleService.create(dto, creator));
+    }
+
+    @PutMapping("/qna/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_QNA')")
+    public ResponseEntity<QnaArticleResponseDto> updateQnaArticle(
+            @PathVariable Long id, @Valid @RequestBody QnaArticleRequestDto dto) {
+        return ResponseEntity.ok(qnaArticleService.update(id, dto));
+    }
+
+    @PatchMapping("/qna/{id}/status")
+    @PreAuthorize("hasAuthority('MANAGE_QNA')")
+    public ResponseEntity<Map<String, String>> updateQnaStatus(
+            @PathVariable Long id, @RequestBody Map<String, String> body) {
+        org.link.linkvault.entity.QnaStatus status = org.link.linkvault.entity.QnaStatus.valueOf(body.get("status"));
+        qnaArticleService.updateStatus(id, status);
+        return ResponseEntity.ok(Map.of("message", "Status updated"));
+    }
+
+    @DeleteMapping("/qna/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_QNA')")
+    public ResponseEntity<Void> deleteQnaArticle(@PathVariable Long id) {
+        qnaArticleService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Announcement Management ---
+
+    @PostMapping("/announcements")
+    @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
+    public ResponseEntity<AnnouncementResponseDto> createAnnouncement(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody AnnouncementRequestDto dto) {
+        User creator = userService.getUserEntity(userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(announcementService.create(dto, creator));
+    }
+
+    @PutMapping("/announcements/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
+    public ResponseEntity<AnnouncementResponseDto> updateAnnouncement(
+            @PathVariable Long id, @Valid @RequestBody AnnouncementRequestDto dto) {
+        return ResponseEntity.ok(announcementService.update(id, dto));
+    }
+
+    @PatchMapping("/announcements/{id}/status")
+    @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
+    public ResponseEntity<Map<String, String>> updateAnnouncementStatus(
+            @PathVariable Long id, @RequestBody Map<String, String> body) {
+        org.link.linkvault.entity.AnnouncementStatus status = org.link.linkvault.entity.AnnouncementStatus.valueOf(body.get("status"));
+        announcementService.updateStatus(id, status);
+        return ResponseEntity.ok(Map.of("message", "Status updated"));
+    }
+
+    @DeleteMapping("/announcements/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
+    public ResponseEntity<Void> deleteAnnouncement(@PathVariable Long id) {
+        announcementService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Settings - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="header-bar">
+            <h2>Settings</h2>
+        </div>
+
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+            <button class="settings-tab active" onclick="switchSettingsTab('appearance')">Appearance</button>
+            <button class="settings-tab" onclick="switchSettingsTab('notifications')">Notifications</button>
+            <button class="settings-tab" onclick="switchSettingsTab('privacy')">Privacy</button>
+            <button class="settings-tab" onclick="switchSettingsTab('account')">Account</button>
+        </div>
+
+        <!-- Appearance Tab -->
+        <div id="tab-appearance" class="settings-panel active">
+            <div class="settings-card">
+                <h3>Theme</h3>
+                <p class="settings-desc">Choose your preferred theme for the application.</p>
+                <div class="theme-options">
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="DARK"
+                               th:checked="${settings != null and settings.theme.name() == 'DARK'}"
+                               onchange="updateTheme(this.value)"/>
+                        <span class="theme-option-label">
+                            <span class="theme-preview theme-preview-dark"></span>
+                            Dark
+                        </span>
+                    </label>
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="LIGHT"
+                               th:checked="${settings != null and settings.theme.name() == 'LIGHT'}"
+                               onchange="updateTheme(this.value)"/>
+                        <span class="theme-option-label">
+                            <span class="theme-preview theme-preview-light"></span>
+                            Light
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Tab -->
+        <div id="tab-notifications" class="settings-panel">
+            <div class="settings-card">
+                <h3>Notification Preferences</h3>
+                <p class="settings-desc">Control how you receive notifications.</p>
+                <div class="settings-toggle-row">
+                    <div>
+                        <strong>Email Notifications</strong>
+                        <p class="settings-desc">Receive email notifications for important events.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="emailNotif"
+                               th:checked="${settings != null and settings.emailNotifications}"
+                               onchange="updateNotifications()"/>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-toggle-row">
+                    <div>
+                        <strong>Browser Notifications</strong>
+                        <p class="settings-desc">Receive browser push notifications.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="browserNotif"
+                               th:checked="${settings != null and settings.browserNotifications}"
+                               onchange="updateNotifications()"/>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacy Tab -->
+        <div id="tab-privacy" class="settings-panel">
+            <div class="settings-card">
+                <h3>Privacy Settings</h3>
+                <p class="settings-desc">Control your profile visibility and data sharing.</p>
+                <div class="form-group">
+                    <label>Profile Visibility</label>
+                    <select class="form-control" id="profileVisibility"
+                            onchange="updatePrivacy()" style="max-width: 300px;">
+                        <option value="PUBLIC" th:selected="${settings != null and settings.profileVisibility.name() == 'PUBLIC'}">Public</option>
+                        <option value="PRIVATE" th:selected="${settings != null and settings.profileVisibility.name() == 'PRIVATE'}">Private</option>
+                    </select>
+                </div>
+                <div class="settings-toggle-row">
+                    <div>
+                        <strong>Show Email</strong>
+                        <p class="settings-desc">Display your email address on your profile.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showEmail"
+                               th:checked="${settings != null and settings.showEmail}"
+                               onchange="updatePrivacy()"/>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Tab -->
+        <div id="tab-account" class="settings-panel">
+            <div class="settings-card">
+                <h3>Change Email</h3>
+                <p class="settings-desc">Update your account email address.</p>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Current: <strong th:text="${userEmail}">user@example.com</strong>
+                </p>
+                <form onsubmit="changeEmail(event)">
+                    <div class="form-group">
+                        <label for="newEmail">New Email</label>
+                        <input type="email" id="newEmail" class="form-control" placeholder="new@example.com"
+                               required style="max-width: 400px;"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Email</button>
+                </form>
+            </div>
+
+            <div class="settings-card" style="margin-top: 16px;">
+                <h3>Change Password</h3>
+                <p class="settings-desc">Update your account password.</p>
+                <form onsubmit="changePassword(event)">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control" required
+                               style="max-width: 400px;"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" class="form-control" required
+                               minlength="6" style="max-width: 400px;"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-control" required
+                               minlength="6" style="max-width: 400px;"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+
+            <div class="settings-card" style="margin-top: 16px;">
+                <h3>Data Export</h3>
+                <p class="settings-desc">Export your bookmarks for backup or migration.</p>
+                <div style="display: flex; gap: 8px;">
+                    <a href="/api/data/export/json" class="btn btn-outline">Export JSON</a>
+                    <a href="/api/data/export/html" class="btn btn-outline">Export HTML</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: searchModal}"></div>
+<script th:src="@{/js/app.js}"></script>
+<script>
+function switchSettingsTab(tabName) {
+    document.querySelectorAll('.settings-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById('tab-' + tabName).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function updateTheme(theme) {
+    fetch('/api/settings/theme', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: theme })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function() {
+        applyTheme(theme);
+        showToast('Theme updated');
+    })
+    .catch(function() { showToast('Error updating theme', 'error'); });
+}
+
+function updateNotifications() {
+    fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            emailNotifications: document.getElementById('emailNotif').checked,
+            browserNotifications: document.getElementById('browserNotif').checked
+        })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function() { showToast('Notification preferences updated'); })
+    .catch(function() { showToast('Error updating notifications', 'error'); });
+}
+
+function updatePrivacy() {
+    fetch('/api/settings/privacy', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            profileVisibility: document.getElementById('profileVisibility').value,
+            showEmail: document.getElementById('showEmail').checked
+        })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function() { showToast('Privacy settings updated'); })
+    .catch(function() { showToast('Error updating privacy', 'error'); });
+}
+
+function changePassword(e) {
+    e.preventDefault();
+    var newPw = document.getElementById('newPassword').value;
+    var confirmPw = document.getElementById('confirmPassword').value;
+    if (newPw !== confirmPw) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    fetch('/api/settings/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            currentPassword: document.getElementById('currentPassword').value,
+            newPassword: newPw,
+            confirmPassword: confirmPw
+        })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function() {
+        showToast('Password changed successfully');
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+    })
+    .catch(function(err) { showToast(err.message || 'Error changing password', 'error'); });
+}
+
+function changeEmail(e) {
+    e.preventDefault();
+    fetch('/api/settings/change-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: document.getElementById('newEmail').value })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function() {
+        showToast('Email updated successfully');
+        setTimeout(function() { location.reload(); }, 1000);
+    })
+    .catch(function(err) { showToast(err.message || 'Error changing email', 'error'); });
+}
+</script>
+</body>
+</html>

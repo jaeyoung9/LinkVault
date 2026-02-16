@@ -53,7 +53,9 @@ public class DataInitializer implements CommandLineRunner {
                 new Permission("MANAGE_BACKUP", "Create and restore backups", "ADMIN"),
                 new Permission("VIEW_STATS", "View system statistics", "ADMIN"),
                 new Permission("COMMENT", "Post comments on bookmarks", "COMMUNITY"),
-                new Permission("VOTE", "Vote on comments", "COMMUNITY")
+                new Permission("VOTE", "Vote on comments", "COMMUNITY"),
+                new Permission("MANAGE_QNA", "Create, edit, and delete QnA articles", "CONTENT"),
+                new Permission("MANAGE_ANNOUNCEMENTS", "Create, edit, and delete announcements", "ADMIN")
         );
         permissionRepository.saveAll(permissions);
 
@@ -62,13 +64,14 @@ public class DataInitializer implements CommandLineRunner {
         assignPermissions(Role.ADMIN, Arrays.asList(
                 "MANAGE_USERS", "MANAGE_MENUS", "MANAGE_TAGS", "MANAGE_BOOKMARKS",
                 "MANAGE_INVITATIONS", "MODERATE_COMMENTS", "VIEW_AUDIT_LOG",
-                "MANAGE_BACKUP", "VIEW_STATS", "COMMENT", "VOTE"
+                "MANAGE_BACKUP", "VIEW_STATS", "COMMENT", "VOTE",
+                "MANAGE_QNA", "MANAGE_ANNOUNCEMENTS"
         ));
 
         // MODERATOR: limited admin + community
         assignPermissions(Role.MODERATOR, Arrays.asList(
                 "MANAGE_TAGS", "MODERATE_COMMENTS", "VIEW_AUDIT_LOG",
-                "VIEW_STATS", "COMMENT", "VOTE"
+                "VIEW_STATS", "COMMENT", "VOTE", "MANAGE_QNA"
         ));
 
         // USER: community only
@@ -135,7 +138,7 @@ public class DataInitializer implements CommandLineRunner {
         // User Sidebar menu items
         menuItemRepository.save(MenuItem.builder().label("All Bookmarks").url("/").menuType(MenuType.SIDEBAR)
                 .displayOrder(1).visible(true).systemItem(true).createdBy("system").build());
-        menuItemRepository.save(MenuItem.builder().label("Import").url("/import").menuType(MenuType.SIDEBAR)
+        menuItemRepository.save(MenuItem.builder().label("Saved").url("/saved").menuType(MenuType.SIDEBAR)
                 .displayOrder(2).visible(true).systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Admin Panel").url("/admin").menuType(MenuType.SIDEBAR)
                 .displayOrder(3).visible(true).requiredRole(Role.MODERATOR).systemItem(true).createdBy("system").build());
@@ -161,6 +164,10 @@ public class DataInitializer implements CommandLineRunner {
                 .displayOrder(5).visible(true).requiredPermission("MANAGE_INVITATIONS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Backup / Restore").url("/admin/backup").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(9).visible(true).requiredPermission("MANAGE_BACKUP").systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("QnA Management").url("/admin/qna").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(10).visible(true).requiredPermission("MANAGE_QNA").systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("Announcements").url("/admin/announcements").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(11).visible(true).requiredPermission("MANAGE_ANNOUNCEMENTS").systemItem(true).createdBy("system").build());
 
         log.info("Menu items initialized");
     }

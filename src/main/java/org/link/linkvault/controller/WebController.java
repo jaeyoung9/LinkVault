@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.BookmarkResponseDto;
 import org.link.linkvault.dto.FolderResponseDto;
 import org.link.linkvault.entity.User;
-import org.link.linkvault.service.BookmarkService;
-import org.link.linkvault.service.FolderService;
-import org.link.linkvault.service.TagService;
-import org.link.linkvault.service.UserService;
+import org.link.linkvault.service.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -29,6 +26,10 @@ public class WebController {
     private final FolderService folderService;
     private final TagService tagService;
     private final UserService userService;
+    private final SavedBookmarkService savedBookmarkService;
+    private final QnaArticleService qnaArticleService;
+    private final AnnouncementService announcementService;
+    private final UserSettingsService userSettingsService;
 
     @GetMapping("/login")
     public String login() {
@@ -114,6 +115,17 @@ public class WebController {
         return "bookmark";
     }
 
+    @GetMapping("/saved")
+    public String savedPage(
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        model.addAttribute("bookmarkList", savedBookmarkService.getSavedBookmarks(currentUser));
+        model.addAttribute("pageTitle", "Saved Bookmarks");
+        return "saved";
+    }
+
     @GetMapping("/import")
     public String importPage(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -122,6 +134,71 @@ public class WebController {
         populateCommonModel(model, currentUser);
         model.addAttribute("pageTitle", "Import Bookmarks");
         return "import";
+    }
+
+    @GetMapping("/qna")
+    public String qna(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            Model model,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        model.addAttribute("categories", qnaArticleService.getPublishedCategories());
+        if (keyword != null && !keyword.isBlank()) {
+            model.addAttribute("articles", qnaArticleService.searchPublished(keyword, PageRequest.of(0, 50)).getContent());
+            model.addAttribute("keyword", keyword);
+        } else if (category != null && !category.isBlank()) {
+            model.addAttribute("articles", qnaArticleService.findPublishedByCategory(category));
+            model.addAttribute("selectedCategory", category);
+        } else {
+            model.addAttribute("articles", qnaArticleService.findAllPublished());
+        }
+        model.addAttribute("pageTitle", "QnA Guide");
+        return "qna";
+    }
+
+    @GetMapping("/qna/{id}")
+    public String qnaDetail(@PathVariable Long id, Model model,
+                            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        model.addAttribute("article", qnaArticleService.findPublishedById(id));
+        model.addAttribute("feedback", qnaArticleService.getFeedback(id, currentUser));
+        model.addAttribute("pageTitle", "QnA Guide");
+        return "qna-detail";
+    }
+
+    @GetMapping("/announcements")
+    public String announcements(Model model,
+                                @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        model.addAttribute("announcements", announcementService.findVisibleForUser(currentUser));
+        model.addAttribute("pageTitle", "Announcements");
+        return "announcements";
+    }
+
+    @GetMapping("/announcements/{id}")
+    public String announcementDetail(@PathVariable Long id, Model model,
+                                     @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        announcementService.markAsRead(id, currentUser);
+        model.addAttribute("announcement", announcementService.findById(id, currentUser));
+        model.addAttribute("pageTitle", "Announcement");
+        return "announcement-detail";
+    }
+
+    @GetMapping("/settings")
+    public String settings(Model model,
+                           @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        model.addAttribute("settings", userSettingsService.getSettings(currentUser));
+        model.addAttribute("userEmail", currentUser.getEmail());
+        model.addAttribute("pageTitle", "Settings");
+        return "settings";
     }
 
     private void populateCommonModel(Model model, User currentUser) {

@@ -25,6 +25,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final CommentVoteRepository commentVoteRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final NotificationService notificationService;
 
     public List<CommentResponseDto> getCommentsForBookmark(Long bookmarkId, User currentUser) {
         List<Comment> allComments = commentRepository.findAllByBookmarkId(bookmarkId);
@@ -136,6 +137,15 @@ public class CommentService {
         comment = commentRepository.save(comment);
         bookmark.incrementCommentCount();
 
+        // Trigger notifications
+        if (comment.getParent() != null) {
+            notificationService.notifyReply(comment, user);
+        } else {
+            // Top-level comment: notify the bookmark owner
+            notificationService.notifyComment(comment, user);
+        }
+        notificationService.notifyMentions(comment, user);
+
         return CommentResponseDto.from(comment);
     }
 
@@ -199,6 +209,9 @@ public class CommentService {
             else comment.incrementDislikeCount();
             commentVoteRepository.save(new CommentVote(user, comment, voteType));
             resultVote = voteType;
+            if (voteType == VoteType.LIKE) {
+                notificationService.notifyVote(comment, user);
+            }
         }
 
         return CommentVoteResponseDto.builder()

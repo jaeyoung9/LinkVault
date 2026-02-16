@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>QnA Guide - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="header-bar">
+            <h2>QnA Guide</h2>
+            <form class="search-form" action="/qna" method="get">
+                <input type="text" name="keyword" class="search-input" placeholder="Search articles..."
+                       th:value="${keyword}"/>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="qna-categories" th:if="${categories != null and !categories.isEmpty()}">
+            <a href="/qna" class="qna-category-chip" th:classappend="${selectedCategory == null and keyword == null} ? ' active'">All</a>
+            <th:block th:each="cat : ${categories}">
+                <a th:href="@{/qna(category=${cat})}" class="qna-category-chip"
+                   th:classappend="${selectedCategory == cat} ? ' active'"
+                   th:text="${cat}">Category</a>
+            </th:block>
+        </div>
+
+        <!-- Search keyword indicator -->
+        <div th:if="${keyword != null}" style="margin-bottom: 16px;">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">
+                Search results for: <strong th:text="${keyword}"></strong>
+            </span>
+            <a href="/qna" style="margin-left: 12px; font-size: 0.85rem;">Clear</a>
+        </div>
+
+        <!-- Article List -->
+        <div class="qna-article-list" th:if="${articles != null and !articles.isEmpty()}">
+            <th:block th:each="article : ${articles}">
+                <a th:href="@{'/qna/' + ${article.id}}" class="qna-article-card">
+                    <div class="qna-article-card-header">
+                        <span class="qna-article-question" th:text="${article.question}">Question?</span>
+                        <span class="sidebar-badge-dot" th:if="${article.recentlyUpdated}" title="Recently updated"></span>
+                    </div>
+                    <div class="qna-article-meta">
+                        <span class="badge badge-info" th:text="${article.category}">Category</span>
+                        <span class="qna-article-stats">
+                            <span th:text="'&#128077; ' + ${article.helpfulCount}">0</span>
+                            <span th:text="'&#128078; ' + ${article.notHelpfulCount}">0</span>
+                        </span>
+                    </div>
+                </a>
+            </th:block>
+        </div>
+
+        <div class="empty-state" th:if="${articles == null or articles.isEmpty()}">
+            <h3>No articles found</h3>
+            <p>Check back later for helpful guides and FAQs.</p>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: searchModal}"></div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -26,6 +26,8 @@ public class AdminWebController {
     private final AuditLogService auditLogService;
     private final SystemStatsService systemStatsService;
     private final DatabaseBackupService databaseBackupService;
+    private final QnaArticleService qnaArticleService;
+    private final AnnouncementService announcementService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_STATS')")
@@ -101,5 +103,25 @@ public class AdminWebController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public String permissions() {
         return "admin/permissions";
+    }
+
+    @GetMapping("/qna")
+    @PreAuthorize("hasAuthority('MANAGE_QNA')")
+    public String qnaManagement(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model) {
+        model.addAttribute("articles", qnaArticleService.findAllAdmin(PageRequest.of(page, size)));
+        return "admin/qna";
+    }
+
+    @GetMapping("/announcements")
+    @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
+    public String announcementsManagement(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model) {
+        model.addAttribute("announcements", announcementService.findAllAdmin(PageRequest.of(page, size)));
+        return "admin/announcements";
     }
 }

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Announcements Management - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Announcements Management</h2>
+            <button class="btn btn-primary" onclick="openAnnModal()">+ New Announcement</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Target</th>
+                <th>Pinned</th>
+                <th>Schedule</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="ann : ${announcements.content}">
+                <td th:text="${ann.id}">1</td>
+                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    th:text="${ann.title}">Title</td>
+                <td>
+                    <span class="announcement-priority-badge"
+                          th:classappend="'priority-' + ${ann.priority.name().toLowerCase()}"
+                          th:text="${ann.priority}">INFO</span>
+                </td>
+                <td>
+                    <span class="badge" th:classappend="${ann.status.name() == 'PUBLISHED'} ? 'badge-success' :
+                        (${ann.status.name() == 'DRAFT'} ? 'badge-warning' :
+                        (${ann.status.name() == 'SCHEDULED'} ? 'badge-info' : 'badge-danger'))"
+                          th:text="${ann.status}">STATUS</span>
+                </td>
+                <td th:text="${ann.targetRole != null} ? ${ann.targetRole} : 'All'">All</td>
+                <td th:text="${ann.pinned} ? 'Yes' : 'No'">No</td>
+                <td>
+                    <span th:if="${ann.startAt != null}" th:text="${#temporals.format(ann.startAt, 'MM-dd HH:mm')}" style="font-size: 0.78rem;"></span>
+                    <span th:if="${ann.endAt != null}" style="font-size: 0.78rem;"> ~
+                        <span th:text="${#temporals.format(ann.endAt, 'MM-dd HH:mm')}"></span>
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline" th:onclick="'editAnn(' + ${ann.id} + ')'">Edit</button>
+                    <button class="btn btn-sm btn-primary" th:if="${ann.status.name() == 'DRAFT'}"
+                            th:onclick="'changeAnnStatus(' + ${ann.id} + ', \'SCHEDULED\')'">Schedule</button>
+                    <button class="btn btn-sm btn-primary" th:if="${ann.status.name() == 'DRAFT' or ann.status.name() == 'SCHEDULED'}"
+                            th:onclick="'changeAnnStatus(' + ${ann.id} + ', \'PUBLISHED\')'">Publish</button>
+                    <button class="btn btn-sm btn-outline" th:if="${ann.status.name() == 'PUBLISHED'}"
+                            th:onclick="'changeAnnStatus(' + ${ann.id} + ', \'ARCHIVED\')'">Archive</button>
+                    <button class="btn btn-sm btn-danger" th:onclick="'deleteAnn(' + ${ann.id} + ')'">Del</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div th:if="${announcements != null}" th:replace="~{fragments/layout :: pagination(${announcements})}"></div>
+    </div>
+</div>
+
+<!-- Announcement Modal -->
+<div id="annModal" class="modal-overlay" onclick="if(event.target===this)closeAnnModal()">
+    <div class="modal" style="width: 700px;">
+        <h3 id="annModalTitle">New Announcement</h3>
+        <form id="annForm" onsubmit="saveAnn(event)">
+            <input type="hidden" id="annId"/>
+            <div class="form-group">
+                <label for="annTitle">Title *</label>
+                <input type="text" id="annTitle" class="form-control" placeholder="Announcement title" required/>
+            </div>
+            <div class="form-group">
+                <label for="annContent">Content * (HTML supported)</label>
+                <textarea id="annContent" class="form-control" rows="8" placeholder="Announcement content..." required
+                          style="min-height: 160px;"></textarea>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label for="annPriority">Priority *</label>
+                    <select id="annPriority" class="form-control" required>
+                        <option value="INFO">INFO</option>
+                        <option value="WARN">WARN</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="annTarget">Target Role (optional)</label>
+                    <select id="annTarget" class="form-control">
+                        <option value="">All Users</option>
+                        <option value="USER">USER</option>
+                        <option value="MODERATOR">MODERATOR</option>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label for="annStartAt">Start Date/Time</label>
+                    <input type="datetime-local" id="annStartAt" class="form-control"/>
+                </div>
+                <div class="form-group">
+                    <label for="annEndAt">End Date/Time</label>
+                    <input type="datetime-local" id="annEndAt" class="form-control"/>
+                </div>
+            </div>
+            <div class="settings-toggle-row" style="margin-bottom: 14px;">
+                <label>Pinned</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="annPinned"/>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeAnnModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function openAnnModal() {
+    document.getElementById('annModal').classList.add('active');
+    document.getElementById('annModalTitle').textContent = 'New Announcement';
+    document.getElementById('annForm').reset();
+    document.getElementById('annId').value = '';
+}
+
+function closeAnnModal() {
+    document.getElementById('annModal').classList.remove('active');
+}
+
+function editAnn(id) {
+    fetch('/api/announcements/' + id)
+        .then(function(r) { return r.json(); })
+        .then(function(a) {
+            document.getElementById('annModal').classList.add('active');
+            document.getElementById('annModalTitle').textContent = 'Edit Announcement';
+            document.getElementById('annId').value = a.id;
+            document.getElementById('annTitle').value = a.title;
+            document.getElementById('annContent').value = a.content;
+            document.getElementById('annPriority').value = a.priority;
+            document.getElementById('annTarget').value = a.targetRole || '';
+            document.getElementById('annPinned').checked = a.pinned;
+            if (a.startAt) document.getElementById('annStartAt').value = a.startAt.substring(0, 16);
+            if (a.endAt) document.getElementById('annEndAt').value = a.endAt.substring(0, 16);
+        })
+        .catch(function() { showToast('Error loading announcement', 'error'); });
+}
+
+function saveAnn(e) {
+    e.preventDefault();
+    var id = document.getElementById('annId').value;
+    var data = {
+        title: document.getElementById('annTitle').value,
+        content: document.getElementById('annContent').value,
+        priority: document.getElementById('annPriority').value,
+        targetRole: document.getElementById('annTarget').value || null,
+        pinned: document.getElementById('annPinned').checked,
+        startAt: document.getElementById('annStartAt').value || null,
+        endAt: document.getElementById('annEndAt').value || null
+    };
+
+    var method = id ? 'PUT' : 'POST';
+    var url = id ? '/api/admin/announcements/' + id : '/api/admin/announcements';
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function() {
+        closeAnnModal();
+        showToast(id ? 'Announcement updated' : 'Announcement created');
+        setTimeout(function() { location.reload(); }, 500);
+    })
+    .catch(function(err) { showToast(err.message || 'Error saving announcement', 'error'); });
+}
+
+function changeAnnStatus(id, status) {
+    fetch('/api/admin/announcements/' + id + '/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error();
+        return r.json();
+    })
+    .then(function() {
+        showToast('Status updated to ' + status);
+        setTimeout(function() { location.reload(); }, 500);
+    })
+    .catch(function() { showToast('Error updating status', 'error'); });
+}
+
+function deleteAnn(id) {
+    if (!confirm('Delete this announcement?')) return;
+    fetch('/api/admin/announcements/' + id, { method: 'DELETE' })
+        .then(function() {
+            showToast('Announcement deleted');
+            setTimeout(function() { location.reload(); }, 500);
+        })
+        .catch(function() { showToast('Error deleting announcement', 'error'); });
+}
+</script>
+</body>
+</html>
