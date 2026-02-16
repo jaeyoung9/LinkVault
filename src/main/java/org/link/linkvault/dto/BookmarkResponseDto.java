@@ -16,7 +16,13 @@ public class BookmarkResponseDto {
     private String title;
     private String url;
     private String description;
+    private String favicon;
     private Set<String> tagNames;
+    private Long folderId;
+    private String folderName;
+    private String ownerUsername;
+    private int accessCount;
+    private LocalDateTime lastAccessedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -26,9 +32,15 @@ public class BookmarkResponseDto {
                 .title(bookmark.getTitle())
                 .url(bookmark.getUrl())
                 .description(bookmark.getDescription())
+                .favicon(bookmark.getFavicon())
                 .tagNames(bookmark.getTags().stream()
                         .map(tag -> tag.getName())
                         .collect(Collectors.toSet()))
+                .folderId(bookmark.getFolder() != null ? bookmark.getFolder().getId() : null)
+                .folderName(bookmark.getFolder() != null ? bookmark.getFolder().getName() : null)
+                .ownerUsername(bookmark.getUser() != null ? bookmark.getUser().getUsername() : null)
+                .accessCount(bookmark.getAccessCount())
+                .lastAccessedAt(bookmark.getLastAccessedAt())
                 .createdAt(bookmark.getCreatedAt())
                 .updatedAt(bookmark.getUpdatedAt())
                 .build();

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>All Bookmarks - LinkVault Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>All Bookmarks</h2>
+        </div>
+
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>URL</th>
+                <th>Owner</th>
+                <th>Tags</th>
+                <th>Folder</th>
+                <th>Views</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="bookmark : ${bookmarks.content}">
+                <td th:text="${bookmark.id}">1</td>
+                <td>
+                    <a th:href="${bookmark.url}" target="_blank" th:text="${#strings.abbreviate(bookmark.title, 40)}">Title</a>
+                </td>
+                <td th:text="${#strings.abbreviate(bookmark.url, 40)}">https://...</td>
+                <td th:text="${bookmark.ownerUsername}">admin</td>
+                <td>
+                    <span th:each="tag : ${bookmark.tagNames}" class="tag-badge" th:text="${tag}">tag</span>
+                </td>
+                <td th:text="${bookmark.folderName != null} ? ${bookmark.folderName} : '-'">-</td>
+                <td th:text="${bookmark.accessCount}">0</td>
+                <td th:text="${bookmark.createdAt != null} ? ${#temporals.format(bookmark.createdAt, 'yyyy-MM-dd')} : '-'">2024-01-01</td>
+                <td>
+                    <button class="btn btn-sm btn-danger js-admin-delete-bookmark" th:data-id="${bookmark.id}">Del</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div th:if="${bookmarks != null}" th:replace="~{fragments/layout :: pagination(${bookmarks})}"></div>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

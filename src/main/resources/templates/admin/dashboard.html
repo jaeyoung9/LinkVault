@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin Dashboard - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Dashboard</h2>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.totalUsers}">0</div>
+                <div class="stat-label">Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.totalBookmarks}">0</div>
+                <div class="stat-label">Bookmarks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.totalTags}">0</div>
+                <div class="stat-label">Tags</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.totalFolders}">0</div>
+                <div class="stat-label">Folders</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Bookmarks Per Day (Last 7 Days)</h3>
+                <canvas id="bookmarksPerDayChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Top Tags</h3>
+                <canvas id="topTagsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const bpdLabels = /*[[${stats.bookmarksPerDay.keySet()}]]*/ [];
+    const bpdData = /*[[${stats.bookmarksPerDay.values()}]]*/ [];
+    const ttLabels = /*[[${stats.topTags.keySet()}]]*/ [];
+    const ttData = /*[[${stats.topTags.values()}]]*/ [];
+    /*]]>*/
+
+    const chartDefaults = {
+        color: '#94a3b8',
+        borderColor: '#475569'
+    };
+    Chart.defaults.color = chartDefaults.color;
+
+    new Chart(document.getElementById('bookmarksPerDayChart'), {
+        type: 'line',
+        data: {
+            labels: Array.from(bpdLabels),
+            datasets: [{
+                label: 'Bookmarks',
+                data: Array.from(bpdData),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#334155' } },
+                x: { grid: { color: '#334155' } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('topTagsChart'), {
+        type: 'bar',
+        data: {
+            labels: Array.from(ttLabels),
+            datasets: [{
+                label: 'Bookmarks',
+                data: Array.from(ttData),
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            scales: {
+                x: { beginAtZero: true, grid: { color: '#334155' } },
+                y: { grid: { color: '#334155' } }
+            }
+        }
+    });
+</script>
+</body>
+</html>

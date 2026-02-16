@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>User Management - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>User Management</h2>
+            <button class="btn btn-primary" onclick="openUserModal()">+ New User</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Bookmarks</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="user : ${users}">
+                <td th:text="${user.id}">1</td>
+                <td th:text="${user.username}">admin</td>
+                <td th:text="${user.email}">admin@test.com</td>
+                <td>
+                    <span class="badge" th:classappend="${user.role.name() == 'ADMIN'} ? 'badge-warning' : 'badge-info'"
+                          th:text="${user.role}">ADMIN</span>
+                </td>
+                <td th:text="${user.bookmarkCount}">0</td>
+                <td th:text="${user.createdAt != null} ? ${#temporals.format(user.createdAt, 'yyyy-MM-dd')} : '-'">2024-01-01</td>
+                <td>
+                    <span class="badge" th:classappend="${user.enabled} ? 'badge-success' : 'badge-danger'"
+                          th:text="${user.enabled} ? 'Active' : 'Disabled'">Active</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline js-edit-user"
+                            th:data-id="${user.id}"
+                            th:data-username="${user.username}"
+                            th:data-email="${user.email}"
+                            th:data-role="${user.role}"
+                            th:data-enabled="${user.enabled}">Edit</button>
+                    <button class="btn btn-sm btn-danger js-delete-user" th:data-id="${user.id}">Del</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- User Modal -->
+<div id="userModal" class="modal-overlay" onclick="if(event.target===this)closeUserModal()">
+    <div class="modal">
+        <h3 id="userModalTitle">New User</h3>
+        <form id="userForm" onsubmit="saveUser(event)">
+            <input type="hidden" id="userId"/>
+            <div class="form-group">
+                <label for="userUsername">Username *</label>
+                <input type="text" id="userUsername" class="form-control" placeholder="Username" required/>
+            </div>
+            <div class="form-group">
+                <label for="userEmail">Email *</label>
+                <input type="email" id="userEmail" class="form-control" placeholder="email@example.com" required/>
+            </div>
+            <div class="form-group">
+                <label for="userPassword">Password</label>
+                <input type="password" id="userPassword" class="form-control" placeholder="Min 6 characters"/>
+            </div>
+            <div class="form-group">
+                <label for="userRole">Role *</label>
+                <select id="userRole" class="form-control">
+                    <option value="USER">USER</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="userEnabled" checked/> Enabled
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeUserModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

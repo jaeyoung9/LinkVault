@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Backup / Restore - LinkVault Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Backup / Restore</h2>
+            <button class="btn btn-primary" onclick="createBackup()">Create Backup</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Backup File</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="backup : ${backups}">
+                <td th:text="${backup}">linkvault_backup_20240101_000000.sql</td>
+                <td>
+                    <button class="btn btn-sm btn-outline js-restore-backup" th:data-filename="${backup}">Restore</button>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(backups)}">
+                <td colspan="2" style="text-align: center; color: var(--text-muted);">No backups found</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

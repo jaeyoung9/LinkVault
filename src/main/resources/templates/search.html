@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${pageTitle} + ' - LinkVault'">LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="header-bar">
+            <h2 th:text="${pageTitle}">Search Results</h2>
+            <form class="search-form" action="/search" method="get">
+                <input type="text" name="keyword" class="search-input" th:value="${keyword}" placeholder="Search bookmarks..."/>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+
+        <p style="color: var(--text-muted); margin-bottom: 16px;"
+           th:text="${bookmarks.totalElements} + ' results found'">0 results</p>
+
+        <div class="bookmark-grid" th:if="${bookmarks.totalElements > 0}">
+            <th:block th:each="bookmark : ${bookmarks.content}">
+                <div th:replace="~{fragments/layout :: bookmarkCard(${bookmark})}"></div>
+            </th:block>
+        </div>
+        <div class="empty-state" th:if="${bookmarks.totalElements == 0}">
+            <h3>No results found</h3>
+            <p>Try a different search term.</p>
+        </div>
+
+        <div th:replace="~{fragments/layout :: pagination(${bookmarks})}"></div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: bookmarkModal}"></div>
+<div th:replace="~{fragments/layout :: folderModal}"></div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

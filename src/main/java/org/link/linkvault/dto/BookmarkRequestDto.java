@@ -1,15 +1,17 @@
 package org.link.linkvault.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.Setter;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.util.Set;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -27,4 +29,6 @@ public class BookmarkRequestDto {
     private String description;
 
     private Set<String> tagNames;
+
+    private Long folderId;
 }

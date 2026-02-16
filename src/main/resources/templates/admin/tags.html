@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Tag Management - LinkVault Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Tag Management</h2>
+            <button class="btn btn-danger" onclick="cleanupUnusedTags()">Cleanup Unused Tags</button>
+        </div>
+
+        <!-- Merge Form -->
+        <div class="chart-card" style="margin-bottom: 20px;">
+            <h3>Merge Tags</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Select tags below and enter a target name to merge them.
+            </p>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="mergeTargetName" class="form-control" placeholder="Target tag name" style="max-width: 300px;"/>
+                <button class="btn btn-primary" onclick="mergeTags()">Merge Selected</button>
+            </div>
+        </div>
+
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAllTags" onchange="toggleAllTags(this)"/></th>
+                <th>Tag Name</th>
+                <th>Bookmark Count</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="tag : ${tags}">
+                <td><input type="checkbox" class="tag-checkbox" th:value="${tag.id}"/></td>
+                <td th:text="${tag.name}">tag</td>
+                <td th:text="${tag.bookmarkCount}">0</td>
+                <td>
+                    <button class="btn btn-sm btn-danger js-delete-tag" th:data-id="${tag.id}">Del</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!-- Sidebar Fragment -->
+<div th:fragment="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <h1>LinkVault</h1>
+        <p>Bookmark Manager</p>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
+           sec:authentication="name">user</p>
+    </div>
+
+    <div class="sidebar-section">
+        <a href="/" class="sidebar-link">All Bookmarks</a>
+    </div>
+
+    <div class="sidebar-section">
+        <h3>Folders</h3>
+        <div id="uncategorizedDrop">
+            <a href="/" class="sidebar-link">Uncategorized</a>
+        </div>
+        <th:block th:each="folder : ${folders}">
+            <div th:replace="~{fragments/layout :: folderTree(${folder})}"></div>
+        </th:block>
+        <a href="javascript:void(0)" onclick="openFolderModal()" class="sidebar-link" style="color: var(--accent);">+ New Folder</a>
+    </div>
+
+    <div class="sidebar-section">
+        <h3>Tags</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0;">
+            <a th:each="tag : ${tags}" th:href="@{'/tag/' + ${tag.name}}" class="tag-badge">
+                <span th:text="${tag.name}">tag</span>
+                <span class="tag-count" th:text="${tag.bookmarkCount}">0</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="sidebar-section" style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px;">
+        <div sec:authorize="hasRole('ADMIN')">
+            <a href="/admin" class="sidebar-link" style="color: var(--warning);">Admin Panel</a>
+        </div>
+        <a href="/api/data/export/json" class="sidebar-link">Export JSON</a>
+        <a href="/api/data/export/html" class="sidebar-link">Export HTML</a>
+        <a href="/import" class="sidebar-link">Import</a>
+        <form th:action="@{/logout}" method="post" style="margin: 0;">
+            <button type="submit" class="sidebar-link" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem; padding: 6px 12px;">
+                Logout
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Recursive Folder Tree Fragment -->
+<div th:fragment="folderTree(folder)">
+    <div class="folder-item" th:data-folder-id="${folder.id}" draggable="false">
+        <a th:href="@{'/folder/' + ${folder.id}}" class="sidebar-link">
+            <span th:text="${folder.name}">Folder</span>
+            <span class="tag-count" th:text="${folder.bookmarkCount}">0</span>
+        </a>
+        <div class="folder-children" th:if="${folder.children != null and !folder.children.isEmpty()}">
+            <th:block th:each="child : ${folder.children}">
+                <div th:replace="~{fragments/layout :: folderTree(${child})}"></div>
+            </th:block>
+        </div>
+    </div>
+</div>
+
+<!-- Bookmark Card Fragment -->
+<div th:fragment="bookmarkCard(bookmark)" class="bookmark-card" draggable="true"
+     th:data-id="${bookmark.id}" th:data-url="${bookmark.url}">
+    <div class="bookmark-header">
+        <img th:if="${bookmark.favicon != null and !bookmark.favicon.isEmpty()}"
+             th:src="${bookmark.favicon}" class="bookmark-favicon" alt=""
+             onerror="this.style.display='none'"/>
+        <a href="javascript:void(0)" class="bookmark-title js-access-link"
+           th:data-id="${bookmark.id}" th:data-url="${bookmark.url}"
+           th:text="${bookmark.title}">Title</a>
+        <div class="bookmark-actions">
+            <button class="btn btn-sm btn-outline js-edit-btn" th:data-id="${bookmark.id}">Edit</button>
+            <button class="btn btn-sm btn-danger js-delete-btn" th:data-id="${bookmark.id}">Del</button>
+        </div>
+    </div>
+    <div class="bookmark-url" th:text="${bookmark.url}">https://example.com</div>
+    <div class="bookmark-desc" th:if="${bookmark.description != null and !bookmark.description.isEmpty()}"
+         th:text="${bookmark.description}">Description</div>
+    <div class="bookmark-meta">
+        <div class="bookmark-tags">
+            <a th:each="tag : ${bookmark.tagNames}" th:href="@{'/tag/' + ${tag}}" class="tag-badge" th:text="${tag}">tag</a>
+        </div>
+        <div class="bookmark-stats">
+            <span th:if="${bookmark.folderName != null}" th:text="'Folder: ' + ${bookmark.folderName}"></span>
+            <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination Fragment -->
+<div th:fragment="pagination(page)" class="pagination" th:if="${page.totalPages > 1}">
+    <a class="page-link" th:classappend="${page.first} ? 'disabled'"
+       th:href="@{''(page=${page.number - 1})}">&laquo;</a>
+    <th:block th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}">
+        <a class="page-link" th:classappend="${i == page.number} ? 'active'"
+           th:href="@{''(page=${i})}" th:text="${i + 1}">1</a>
+    </th:block>
+    <a class="page-link" th:classappend="${page.last} ? 'disabled'"
+       th:href="@{''(page=${page.number + 1})}">&raquo;</a>
+</div>
+
+<!-- Bookmark Modal Fragment -->
+<div th:fragment="bookmarkModal" id="bookmarkModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+        <h3 id="modalTitle">Add Bookmark</h3>
+        <form id="bookmarkForm" onsubmit="saveBookmark(event)">
+            <input type="hidden" id="bookmarkId"/>
+            <div class="form-group">
+                <label for="bmUrl">URL *</label>
+                <input type="url" id="bmUrl" class="form-control" placeholder="https://..." required/>
+            </div>
+            <div class="form-group">
+                <label for="bmTitle">Title *</label>
+                <input type="text" id="bmTitle" class="form-control" placeholder="Bookmark title" required/>
+            </div>
+            <div class="form-group">
+                <label for="bmDescription">Description</label>
+                <textarea id="bmDescription" class="form-control" placeholder="Optional description"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="bmTags">Tags (comma separated)</label>
+                <input type="text" id="bmTags" class="form-control" placeholder="java, spring, tutorial"/>
+            </div>
+            <div class="form-group">
+                <label for="bmFolder">Folder</label>
+                <select id="bmFolder" class="form-control">
+                    <option value="">-- No Folder --</option>
+                    <option th:each="f : ${folders}" th:value="${f.id}" th:text="${f.name}">Folder</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Folder Modal Fragment -->
+<div th:fragment="folderModal" id="folderModal" class="modal-overlay" onclick="if(event.target===this)closeFolderModal()">
+    <div class="modal">
+        <h3>New Folder</h3>
+        <form id="folderForm" onsubmit="saveFolder(event)">
+            <div class="form-group">
+                <label for="folderName">Folder Name *</label>
+                <input type="text" id="folderName" class="form-control" placeholder="My Folder" required/>
+            </div>
+            <div class="form-group">
+                <label for="folderParent">Parent Folder</label>
+                <select id="folderParent" class="form-control">
+                    <option value="">-- Root Level --</option>
+                    <option th:each="f : ${folders}" th:value="${f.id}" th:text="${f.name}">Folder</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeFolderModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</html>

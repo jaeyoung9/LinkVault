@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!-- Admin Sidebar Fragment -->
+<div th:fragment="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <h1>LinkVault</h1>
+        <p>Admin Panel</p>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
+           sec:authentication="name">admin</p>
+    </div>
+
+    <div class="sidebar-section">
+        <a href="/admin" class="sidebar-link">Dashboard</a>
+        <a href="/admin/users" class="sidebar-link">Users</a>
+        <a href="/admin/bookmarks" class="sidebar-link">All Bookmarks</a>
+        <a href="/admin/tags" class="sidebar-link">Tag Management</a>
+        <a href="/admin/audit" class="sidebar-link">Audit Log</a>
+        <a href="/admin/backup" class="sidebar-link">Backup / Restore</a>
+    </div>
+
+    <div class="sidebar-section" style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px;">
+        <a href="/" class="sidebar-link">Back to App</a>
+        <form th:action="@{/logout}" method="post" style="margin: 0;">
+            <button type="submit" class="sidebar-link" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem; padding: 6px 12px;">
+                Logout
+            </button>
+        </form>
+    </div>
+</div>
+
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Audit Log - LinkVault Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Audit Log</h2>
+        </div>
+
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity Type</th>
+                <th>Entity ID</th>
+                <th>Details</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="log : ${logs.content}">
+                <td th:text="${log.timestamp != null} ? ${#temporals.format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')} : '-'">2024-01-01 00:00:00</td>
+                <td th:text="${log.username}">admin</td>
+                <td><span class="badge badge-info" th:text="${log.action}">LOGIN</span></td>
+                <td th:text="${log.entityType != null} ? ${log.entityType} : '-'">Bookmark</td>
+                <td th:text="${log.entityId != null} ? ${log.entityId} : '-'">1</td>
+                <td th:text="${log.details != null} ? ${#strings.abbreviate(log.details, 60)} : '-'">Details</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div th:if="${logs != null}" class="pagination" th:if="${logs.totalPages > 1}">
+            <a class="page-link" th:classappend="${logs.first} ? 'disabled'"
+               th:href="@{/admin/audit(page=${logs.number - 1})}">&laquo;</a>
+            <th:block th:each="i : ${#numbers.sequence(0, logs.totalPages - 1)}">
+                <a class="page-link" th:classappend="${i == logs.number} ? 'active'"
+                   th:href="@{/admin/audit(page=${i})}" th:text="${i + 1}">1</a>
+            </th:block>
+            <a class="page-link" th:classappend="${logs.last} ? 'disabled'"
+               th:href="@{/admin/audit(page=${logs.number + 1})}">&raquo;</a>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

@@ -27,6 +27,17 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+
+    // Security
+    implementation("org.springframework.boot:spring-boot-starter-security")
+
+    // Thymeleaf extras
+    implementation("nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:3.1.0")
+    implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity5")
+
+    // Metadata extraction (URL title, description, favicon)
+    implementation("org.jsoup:jsoup:1.17.2")
 
     // Database
     runtimeOnly("com.h2database:h2")
