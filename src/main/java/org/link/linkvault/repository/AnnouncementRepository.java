@@ -36,4 +36,6 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Long
            "AND (a.targetRole IS NULL OR a.targetRole = :role) " +
            "AND a.id NOT IN (SELECT ar.announcement.id FROM AnnouncementRead ar WHERE ar.user.id = :userId)")
     long countUnreadForUser(@Param("userId") Long userId, @Param("role") Role role);
+
+    List<Announcement> findByCreatedById(Long userId);
 }

@@ -21,4 +21,8 @@ public interface SavedBookmarkRepository extends JpaRepository<SavedBookmark, Lo
 
     @Query("SELECT sb.bookmark.id FROM SavedBookmark sb WHERE sb.user.id = :userId AND sb.bookmark.id IN :bookmarkIds")
     List<Long> findBookmarkIdsByUserIdAndBookmarkIdIn(@Param("userId") Long userId, @Param("bookmarkIds") List<Long> bookmarkIds);
+
+    void deleteByUserId(Long userId);
+
+    void deleteByBookmarkId(Long bookmarkId);
 }

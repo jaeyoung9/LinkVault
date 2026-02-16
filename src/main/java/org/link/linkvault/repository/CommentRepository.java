@@ -2,6 +2,7 @@ package org.link.linkvault.repository;
 
 import org.link.linkvault.entity.Comment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,4 +20,14 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findAllWithUserAndBookmark();
 
     long countByBookmarkId(Long bookmarkId);
+
+    List<Comment> findByUserId(Long userId);
+
+    void deleteByBookmarkId(Long bookmarkId);
+
+    @Modifying
+    @Query("UPDATE Comment c SET c.parent = null WHERE c.parent.id IN (SELECT c2.id FROM Comment c2 WHERE c2.user.id = :userId)")
+    void detachRepliesFromUserComments(@Param("userId") Long userId);
+
+    void deleteByUserId(Long userId);
 }

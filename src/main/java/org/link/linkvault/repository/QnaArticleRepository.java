@@ -40,4 +40,6 @@ public interface QnaArticleRepository extends JpaRepository<QnaArticle, Long> {
 
     @Query("SELECT COUNT(q) FROM QnaArticle q WHERE q.status = 'PUBLISHED' AND q.updatedAt > :since")
     long countRecentlyUpdatedPublished(@Param("since") LocalDateTime since);
+
+    List<QnaArticle> findByCreatedById(Long userId);
 }

@@ -8,4 +8,8 @@ import java.util.Optional;
 public interface QnaFeedbackRepository extends JpaRepository<QnaFeedback, Long> {
 
     Optional<QnaFeedback> findByUserIdAndQnaArticleId(Long userId, Long qnaArticleId);
+
+    void deleteByQnaArticleId(Long qnaArticleId);
+
+    void deleteByUserId(Long userId);
 }

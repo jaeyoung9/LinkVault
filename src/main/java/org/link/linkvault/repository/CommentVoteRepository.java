@@ -11,4 +11,8 @@ public interface CommentVoteRepository extends JpaRepository<CommentVote, Long> 
     Optional<CommentVote> findByUserIdAndCommentId(Long userId, Long commentId);
 
     List<CommentVote> findByUserIdAndCommentIdIn(Long userId, List<Long> commentIds);
+
+    void deleteByUserId(Long userId);
+
+    void deleteByCommentId(Long commentId);
 }

@@ -21,4 +21,8 @@ public interface FavoriteBookmarkRepository extends JpaRepository<FavoriteBookma
 
     @Query("SELECT fb.bookmark.id FROM FavoriteBookmark fb WHERE fb.user.id = :userId AND fb.bookmark.id IN :bookmarkIds")
     List<Long> findBookmarkIdsByUserIdAndBookmarkIdIn(@Param("userId") Long userId, @Param("bookmarkIds") List<Long> bookmarkIds);
+
+    void deleteByUserId(Long userId);
+
+    void deleteByBookmarkId(Long bookmarkId);
 }

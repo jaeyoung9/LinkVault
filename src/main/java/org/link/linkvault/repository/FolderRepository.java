@@ -27,4 +27,6 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
     List<Folder> findByNameContainingIgnoreCaseAndUserId(String name, Long userId);
 
     List<Folder> findByNameContainingIgnoreCase(String name);
+
+    void deleteByUserId(Long userId);
 }

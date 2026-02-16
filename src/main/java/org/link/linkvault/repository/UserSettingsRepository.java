@@ -14,4 +14,6 @@ public interface UserSettingsRepository extends JpaRepository<UserSettings, Long
 
     @Query("SELECT us.theme FROM UserSettings us WHERE us.user.id = :userId")
     Optional<Theme> findThemeByUserId(@Param("userId") Long userId);
+
+    void deleteByUserId(Long userId);
 }

@@ -102,6 +102,7 @@ public class QnaArticleService {
         if (!qnaArticleRepository.existsById(id)) {
             throw new ResourceNotFoundException("QnA article not found: " + id);
         }
+        qnaFeedbackRepository.deleteByQnaArticleId(id);
         qnaArticleRepository.deleteById(id);
     }
 

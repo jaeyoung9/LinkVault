@@ -111,4 +111,6 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     // --- Admin stats ---
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    List<Bookmark> findAllByUserId(Long userId);
 }

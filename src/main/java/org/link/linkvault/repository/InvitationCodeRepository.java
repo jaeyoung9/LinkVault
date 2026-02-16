@@ -13,4 +13,6 @@ public interface InvitationCodeRepository extends JpaRepository<InvitationCode, 
 
     @Query("SELECT ic FROM InvitationCode ic LEFT JOIN FETCH ic.createdBy ORDER BY ic.createdAt DESC")
     List<InvitationCode> findAllWithCreator();
+
+    List<InvitationCode> findByCreatedById(Long userId);
 }

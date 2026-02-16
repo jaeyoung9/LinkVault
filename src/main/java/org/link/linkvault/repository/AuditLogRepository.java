@@ -20,4 +20,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     @Query("SELECT a FROM AuditLog a WHERE a.action = :action ORDER BY a.timestamp DESC")
     Page<AuditLog> findByAction(@Param("action") String action, Pageable pageable);
+
+    void deleteByUserId(Long userId);
 }

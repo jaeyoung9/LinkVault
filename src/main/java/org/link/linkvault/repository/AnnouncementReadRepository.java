@@ -10,4 +10,8 @@ public interface AnnouncementReadRepository extends JpaRepository<AnnouncementRe
     Optional<AnnouncementRead> findByUserIdAndAnnouncementId(Long userId, Long announcementId);
 
     boolean existsByUserIdAndAnnouncementId(Long userId, Long announcementId);
+
+    void deleteByAnnouncementId(Long announcementId);
+
+    void deleteByUserId(Long userId);
 }

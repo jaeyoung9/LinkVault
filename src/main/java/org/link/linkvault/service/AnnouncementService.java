@@ -135,6 +135,7 @@ public class AnnouncementService {
         if (!announcementRepository.existsById(id)) {
             throw new ResourceNotFoundException("Announcement not found: " + id);
         }
+        announcementReadRepository.deleteByAnnouncementId(id);
         announcementRepository.deleteById(id);
     }
 

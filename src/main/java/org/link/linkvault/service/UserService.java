@@ -3,9 +3,9 @@ package org.link.linkvault.service;
 import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.UserRequestDto;
 import org.link.linkvault.dto.UserResponseDto;
-import org.link.linkvault.entity.User;
+import org.link.linkvault.entity.*;
 import org.link.linkvault.exception.ResourceNotFoundException;
-import org.link.linkvault.repository.UserRepository;
+import org.link.linkvault.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +20,21 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CommentVoteRepository commentVoteRepository;
+    private final CommentRepository commentRepository;
+    private final SavedBookmarkRepository savedBookmarkRepository;
+    private final FavoriteBookmarkRepository favoriteBookmarkRepository;
+    private final NotificationRepository notificationRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final AnnouncementReadRepository announcementReadRepository;
+    private final QnaFeedbackRepository qnaFeedbackRepository;
+    private final InvitationUseRepository invitationUseRepository;
+    private final UserSettingsRepository userSettingsRepository;
+    private final BookmarkRepository bookmarkRepository;
+    private final FolderRepository folderRepository;
+    private final AnnouncementRepository announcementRepository;
+    private final QnaArticleRepository qnaArticleRepository;
+    private final InvitationCodeRepository invitationCodeRepository;
 
     public List<UserResponseDto> findAll() {
         return userRepository.findAll().stream()
@@ -90,6 +105,83 @@ public class UserService {
     public void delete(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        Long userId = user.getId();
+
+        // 1. Delete comment votes cast by this user
+        commentVoteRepository.deleteByUserId(userId);
+
+        // 2. Clean up bookmarks owned by this user
+        List<Bookmark> userBookmarks = bookmarkRepository.findAllByUserId(userId);
+        for (Bookmark bookmark : userBookmarks) {
+            Long bookmarkId = bookmark.getId();
+            // Delete votes on comments on this bookmark
+            commentRepository.findAllByBookmarkId(bookmarkId)
+                    .forEach(c -> commentVoteRepository.deleteByCommentId(c.getId()));
+            // Delete comments on this bookmark
+            commentRepository.deleteByBookmarkId(bookmarkId);
+            // Delete saved/favorite records referencing this bookmark
+            savedBookmarkRepository.deleteByBookmarkId(bookmarkId);
+            favoriteBookmarkRepository.deleteByBookmarkId(bookmarkId);
+            // Clear ManyToMany tags
+            bookmark.getTags().clear();
+        }
+        bookmarkRepository.deleteAll(userBookmarks);
+
+        // 3. Handle user's comments on other users' bookmarks
+        commentRepository.detachRepliesFromUserComments(userId);
+        commentRepository.findByUserId(userId)
+                .forEach(c -> commentVoteRepository.deleteByCommentId(c.getId()));
+        commentRepository.deleteByUserId(userId);
+
+        // 4. Delete user's saved/favorite bookmarks (on other users' bookmarks)
+        savedBookmarkRepository.deleteByUserId(userId);
+        favoriteBookmarkRepository.deleteByUserId(userId);
+
+        // 5. Delete notifications
+        notificationRepository.deleteByRecipientId(userId);
+        notificationRepository.deleteBySourceUserId(userId);
+
+        // 6. Delete audit logs
+        auditLogRepository.deleteByUserId(userId);
+
+        // 7. Delete announcement reads
+        announcementReadRepository.deleteByUserId(userId);
+
+        // 8. Delete QnA feedback
+        qnaFeedbackRepository.deleteByUserId(userId);
+
+        // 9. Delete invitation uses
+        invitationUseRepository.deleteByUserId(userId);
+
+        // 10. Delete user settings
+        userSettingsRepository.deleteByUserId(userId);
+
+        // 11. Handle announcements created by this user
+        List<Announcement> userAnnouncements = announcementRepository.findByCreatedById(userId);
+        for (Announcement a : userAnnouncements) {
+            announcementReadRepository.deleteByAnnouncementId(a.getId());
+        }
+        announcementRepository.deleteAll(userAnnouncements);
+
+        // 12. Handle QnA articles created by this user
+        List<QnaArticle> userArticles = qnaArticleRepository.findByCreatedById(userId);
+        for (QnaArticle q : userArticles) {
+            qnaFeedbackRepository.deleteByQnaArticleId(q.getId());
+        }
+        qnaArticleRepository.deleteAll(userArticles);
+
+        // 13. Handle invitation codes created by this user
+        List<InvitationCode> userCodes = invitationCodeRepository.findByCreatedById(userId);
+        for (InvitationCode ic : userCodes) {
+            invitationUseRepository.deleteByInvitationCodeId(ic.getId());
+        }
+        invitationCodeRepository.deleteAll(userCodes);
+
+        // 14. Delete folders (cascade handles children)
+        List<Folder> rootFolders = folderRepository.findRootFoldersByUserId(userId);
+        folderRepository.deleteAll(rootFolders);
+
+        // 15. Delete user
         userRepository.delete(user);
     }
 
