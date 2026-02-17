@@ -62,6 +62,22 @@ public class AdminApiController {
         return ResponseEntity.ok(userService.toggleEnabled(id));
     }
 
+    @PostMapping("/users/bulk-deactivate-non-consented")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    public ResponseEntity<Map<String, Object>> bulkDeactivateNonConsented() {
+        int count = userService.bulkDeactivateNonConsented("Bulk deactivated by admin: privacy policy not agreed");
+        return ResponseEntity.ok(Map.of("deactivated", count,
+                "message", count + " user(s) deactivated for not consenting to privacy policy"));
+    }
+
+    @PostMapping("/users/trigger-privacy-deactivation")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> triggerPrivacyDeactivation() {
+        int count = userService.bulkDeactivateNonConsented("Auto-deactivated (manual trigger): privacy policy not agreed");
+        return ResponseEntity.ok(Map.of("deactivated", count,
+                "message", count + " user(s) deactivated via manual scheduler trigger"));
+    }
+
     // --- Tag Management ---
 
     @PostMapping("/tags/merge")

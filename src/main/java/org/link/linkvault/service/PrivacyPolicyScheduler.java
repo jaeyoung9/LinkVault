@@ -3,15 +3,11 @@ package org.link.linkvault.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.link.linkvault.entity.PrivacyPolicy;
-import org.link.linkvault.entity.User;
 import org.link.linkvault.repository.PrivacyPolicyRepository;
-import org.link.linkvault.repository.UserRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Component
@@ -19,10 +15,9 @@ import java.util.List;
 public class PrivacyPolicyScheduler {
 
     private final PrivacyPolicyRepository privacyPolicyRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @Scheduled(cron = "0 0 3 * * *")
-    @Transactional
     public void deactivateNonConsentedUsers() {
         PrivacyPolicy activePolicy = privacyPolicyRepository.findByActiveTrue().orElse(null);
         if (activePolicy == null) {
@@ -36,17 +31,11 @@ public class PrivacyPolicyScheduler {
             return;
         }
 
-        List<User> nonConsentedUsers = userRepository.findEnabledUsersNotConsentedToVersion(activePolicy.getVersion());
-        if (nonConsentedUsers.isEmpty()) {
-            return;
+        int count = userService.bulkDeactivateNonConsented(
+                "Auto-deactivated: did not consent to privacy policy");
+        if (count > 0) {
+            log.info("Auto-deactivated {} user(s) who did not consent to privacy policy v{}",
+                    count, activePolicy.getVersion());
         }
-
-        for (User user : nonConsentedUsers) {
-            user.deactivateForPrivacy("Auto-deactivated: did not consent to privacy policy v" + activePolicy.getVersion());
-        }
-        userRepository.saveAll(nonConsentedUsers);
-
-        log.info("Auto-deactivated {} user(s) who did not consent to privacy policy v{}",
-                nonConsentedUsers.size(), activePolicy.getVersion());
     }
 }

@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.link.linkvault.entity.PrivacyPolicy;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,6 +37,7 @@ public class UserService {
     private final AnnouncementRepository announcementRepository;
     private final QnaArticleRepository qnaArticleRepository;
     private final InvitationCodeRepository invitationCodeRepository;
+    private final PrivacyPolicyRepository privacyPolicyRepository;
 
     public List<UserResponseDto> findAll() {
         return userRepository.findAll().stream()
@@ -196,5 +199,24 @@ public class UserService {
     @Transactional
     public void recordLogin(String username) {
         userRepository.findByUsername(username).ifPresent(User::recordLogin);
+    }
+
+    @Transactional
+    public int bulkDeactivateNonConsented(String reason) {
+        PrivacyPolicy activePolicy = privacyPolicyRepository.findByActiveTrue().orElse(null);
+        if (activePolicy == null) {
+            return 0;
+        }
+
+        List<User> nonConsentedUsers = userRepository.findEnabledUsersNotConsentedToVersion(activePolicy.getVersion());
+        if (nonConsentedUsers.isEmpty()) {
+            return 0;
+        }
+
+        for (User user : nonConsentedUsers) {
+            user.deactivateForPrivacy(reason + " (policy v" + activePolicy.getVersion() + ")");
+        }
+        userRepository.saveAll(nonConsentedUsers);
+        return nonConsentedUsers.size();
     }
 }

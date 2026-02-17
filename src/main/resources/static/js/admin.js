@@ -83,6 +83,29 @@ function deleteUser(id) {
         .catch(function() { showToast('Error deleting user', 'error'); });
 }
 
+// ===== Bulk User Deactivation =====
+function bulkDeactivateNonConsented() {
+    if (!confirm('Deactivate all users who have NOT agreed to the privacy policy?')) return;
+    fetch('/api/admin/users/bulk-deactivate-non-consented', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            showToast(data.message || 'Bulk deactivation complete');
+            setTimeout(function() { location.reload(); }, 500);
+        })
+        .catch(function() { showToast('Error during bulk deactivation', 'error'); });
+}
+// Test Button hide
+// function triggerPrivacyDeactivation() {
+//     if (!confirm('Manually trigger the privacy policy auto-deactivation scheduler?')) return;
+//     fetch('/api/admin/users/trigger-privacy-deactivation', { method: 'POST' })
+//         .then(function(r) { return r.json(); })
+//         .then(function(data) {
+//             showToast(data.message || 'Auto-deactivation triggered');
+//             setTimeout(function() { location.reload(); }, 500);
+//         })
+//         .catch(function() { showToast('Error triggering auto-deactivation', 'error'); });
+// }
+
 // ===== Tag Management =====
 function toggleAllTags(checkbox) {
     var checkboxes = document.querySelectorAll('.tag-checkbox');

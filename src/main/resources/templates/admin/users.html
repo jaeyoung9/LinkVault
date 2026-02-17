@@ -14,7 +14,13 @@
     <div class="main-content">
         <div class="content-header">
             <h2>User Management</h2>
-            <button class="btn btn-primary" onclick="openUserModal()">+ New User</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button sec:authorize="hasAuthority('USER_MANAGE')"
+                        class="btn btn-danger" onclick="bulkDeactivateNonConsented()">Bulk Deactivate Non-Consented</button>
+                <!-- Test Button hide -->
+                <!--<button sec:authorize="hasRole('SUPER_ADMIN')" class="btn btn-outline" onclick="triggerPrivacyDeactivation()">Test: Auto-Deactivation</button>-->
+                <button class="btn btn-primary" onclick="openUserModal()">+ New User</button>
+            </div>
         </div>
 
         <table class="data-table">
