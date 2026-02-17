@@ -14,6 +14,15 @@ function showToast(message, type) {
     setTimeout(function() { toast.remove(); }, 3000);
 }
 
+// ===== CSRF =====
+function csrfHeaders(extra) {
+    var h = extra || {};
+    var token = document.querySelector('meta[name="_csrf"]');
+    var header = document.querySelector('meta[name="_csrf_header"]');
+    if (token && header) h[header.content] = token.content;
+    return h;
+}
+
 // ===== Utility =====
 function escapeHtml(str) {
     if (!str) return '';
@@ -193,6 +202,7 @@ function savePost(event) {
 
     fetch(url, {
         method: method,
+        headers: csrfHeaders(),
         body: formData
     })
     .then(function(r) {
@@ -234,7 +244,7 @@ function saveBookmark(event) {
 
 function deleteBookmark(id) {
     if (!confirm('Delete this post?')) return;
-    fetch('/api/bookmarks/' + id, { method: 'DELETE' })
+    fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: csrfHeaders() })
         .then(function() {
             showToast('Post deleted');
             setTimeout(function() { location.reload(); }, 500);
@@ -243,7 +253,7 @@ function deleteBookmark(id) {
 }
 
 function recordAccess(id, url) {
-    fetch('/api/bookmarks/' + id + '/access', { method: 'POST' });
+    fetch('/api/bookmarks/' + id + '/access', { method: 'POST', headers: csrfHeaders() });
     window.open(url, '_blank');
 }
 
@@ -477,7 +487,7 @@ function reportContent(targetType, targetId) {
 
     fetch('/api/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             targetType: targetType,
             targetId: targetId,
@@ -507,7 +517,7 @@ function saveFolder(event) {
 
     fetch('/api/folders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data)
     })
     .then(function(r) {
@@ -524,7 +534,7 @@ function saveFolder(event) {
 
 function deleteFolder(id) {
     if (!confirm('Delete this folder and all its contents?')) return;
-    fetch('/api/folders/' + id, { method: 'DELETE' })
+    fetch('/api/folders/' + id, { method: 'DELETE', headers: csrfHeaders() })
         .then(function() {
             showToast('Folder deleted');
             setTimeout(function() { location.reload(); }, 500);
@@ -586,7 +596,7 @@ function initDragDrop() {
 function moveBookmarkToFolder(bookmarkId, folderId) {
     fetch('/api/bookmarks/' + bookmarkId + '/move', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ folderId: folderId ? parseInt(folderId) : null })
     })
     .then(function(r) {
@@ -623,7 +633,7 @@ function importFile(format) {
     var formData = new FormData();
     formData.append('file', input.files[0]);
 
-    fetch('/api/data/import/' + format, { method: 'POST', body: formData })
+    fetch('/api/data/import/' + format, { method: 'POST', headers: csrfHeaders(), body: formData })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             showToast(data.message);
@@ -730,7 +740,7 @@ function renderSearchResults(data) {
 
 // ===== Feature 3: Save Bookmark (Read Later) =====
 function toggleSaveBookmark(id) {
-    fetch('/api/bookmarks/' + id + '/save', { method: 'POST' })
+    fetch('/api/bookmarks/' + id + '/save', { method: 'POST', headers: csrfHeaders() })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var btns = document.querySelectorAll('.js-save-btn[data-id="' + id + '"]');
@@ -748,7 +758,7 @@ function toggleSaveBookmark(id) {
 
 // ===== Feature 4: Favorites =====
 function toggleFavoriteBookmark(id) {
-    fetch('/api/bookmarks/' + id + '/favorite', { method: 'POST' })
+    fetch('/api/bookmarks/' + id + '/favorite', { method: 'POST', headers: csrfHeaders() })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var btns = document.querySelectorAll('.js-fav-btn[data-id="' + id + '"]');
@@ -820,7 +830,7 @@ function saveFavoritesOrder() {
     });
     fetch('/api/bookmarks/favorites/reorder', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ items: orderItems })
     }).catch(function() { showToast('Error saving order', 'error'); });
 }
@@ -870,11 +880,11 @@ function loadNotifications() {
 }
 
 function markNotifRead(id) {
-    fetch('/api/notifications/' + id + '/read', { method: 'PUT' }).catch(function() {});
+    fetch('/api/notifications/' + id + '/read', { method: 'PUT', headers: csrfHeaders() }).catch(function() {});
 }
 
 function markAllNotificationsRead() {
-    fetch('/api/notifications/read-all', { method: 'PUT' })
+    fetch('/api/notifications/read-all', { method: 'PUT', headers: csrfHeaders() })
         .then(function() {
             loadNotifications();
             var badge = document.querySelector('.notification-badge');

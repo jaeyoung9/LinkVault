@@ -88,14 +88,10 @@ function saveSetting(key) {
     if (!input) return;
     var value = input.value;
 
-    fetch('/api/admin/settings/' + encodeURIComponent(key), {
+    adminFetch('/api/admin/settings/' + encodeURIComponent(key), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: value })
-    })
-    .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw e; });
-        return r.json();
     })
     .then(function() {
         showToast('Setting updated: ' + key);

@@ -4,6 +4,8 @@
 
 <!-- Admin Sidebar Fragment -->
 <th:block th:fragment="sidebar">
+<meta name="_csrf" th:content="${_csrf.token}"/>
+<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 <script th:inline="javascript">
 (function(){var t=/*[[${currentTheme}]]*/'DARK';if(t==='LIGHT')document.body.classList.add('light-theme');else document.body.classList.remove('light-theme');localStorage.setItem('theme',t);})();
 </script>

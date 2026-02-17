@@ -55,7 +55,7 @@
 <script th:src="@{/js/app.js}"></script>
 <script>
 function acknowledgeAnnouncement(id) {
-    fetch('/api/announcements/' + id + '/acknowledge', { method: 'POST' })
+    fetch('/api/announcements/' + id + '/acknowledge', { method: 'POST', headers: csrfHeaders() })
         .then(function(r) {
             if (!r.ok) throw new Error();
             return r.json();

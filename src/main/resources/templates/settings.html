@@ -178,7 +178,7 @@ function switchSettingsTab(tabName) {
 function updateTheme(theme) {
     fetch('/api/settings/theme', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ theme: theme })
     })
     .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
@@ -192,7 +192,7 @@ function updateTheme(theme) {
 function updateNotifications() {
     fetch('/api/settings/notifications', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             emailNotifications: document.getElementById('emailNotif').checked,
             browserNotifications: document.getElementById('browserNotif').checked
@@ -206,7 +206,7 @@ function updateNotifications() {
 function updatePrivacy() {
     fetch('/api/settings/privacy', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             profileVisibility: document.getElementById('profileVisibility').value,
             showEmail: document.getElementById('showEmail').checked
@@ -227,7 +227,7 @@ function changePassword(e) {
     }
     fetch('/api/settings/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             currentPassword: document.getElementById('currentPassword').value,
             newPassword: newPw,
@@ -251,7 +251,7 @@ function changeEmail(e) {
     e.preventDefault();
     fetch('/api/settings/change-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ email: document.getElementById('newEmail').value })
     })
     .then(function(r) {

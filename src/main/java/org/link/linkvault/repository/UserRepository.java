@@ -1,5 +1,6 @@
 package org.link.linkvault.repository;
 
+import org.link.linkvault.entity.Role;
 import org.link.linkvault.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT COUNT(b) FROM Bookmark b WHERE b.user.id = :userId")
     long countBookmarksByUserId(@Param("userId") Long userId);
+
+    long countByRoleAndEnabledTrue(Role role);
 
     @Query("SELECT u FROM User u WHERE u.enabled = true " +
            "AND u.role <> org.link.linkvault.entity.Role.SUPER_ADMIN " +

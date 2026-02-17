@@ -1,3 +1,33 @@
+// ===== CSRF + Fetch Wrapper =====
+function csrfHeaders(extra) {
+    var h = extra || {};
+    var token = document.querySelector('meta[name="_csrf"]');
+    var header = document.querySelector('meta[name="_csrf_header"]');
+    if (token && header) h[header.content] = token.content;
+    return h;
+}
+
+function adminFetch(url, options) {
+    options = options || {};
+    var headers = options.headers || {};
+    var token = document.querySelector('meta[name="_csrf"]');
+    var headerName = document.querySelector('meta[name="_csrf_header"]');
+    if (token && headerName) headers[headerName.content] = token.content;
+    options.headers = headers;
+    return fetch(url, options).then(function(r) {
+        if (!r.ok) {
+            if (r.status === 204) return null;
+            return r.json().then(function(e) { throw e; }, function() {
+                throw { message: 'Request failed (' + r.status + ')' };
+            });
+        }
+        if (r.status === 204) return null;
+        var ct = r.headers.get('content-type');
+        if (ct && ct.indexOf('application/json') !== -1) return r.json();
+        return null;
+    });
+}
+
 // ===== Toast (reuse pattern from app.js) =====
 function showToast(message, type) {
     type = type || 'success';
@@ -54,14 +84,10 @@ function saveUser(event) {
     var method = id ? 'PUT' : 'POST';
     var url = id ? '/api/admin/users/' + id : '/api/admin/users';
 
-    fetch(url, {
+    adminFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
-    })
-    .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw e; });
-        return r.json();
     })
     .then(function() {
         closeUserModal();
@@ -75,24 +101,23 @@ function saveUser(event) {
 
 function deleteUser(id) {
     if (!confirm('Delete this user?')) return;
-    fetch('/api/admin/users/' + id, { method: 'DELETE' })
+    adminFetch('/api/admin/users/' + id, { method: 'DELETE' })
         .then(function() {
             showToast('User deleted');
             setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(function() { showToast('Error deleting user', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error deleting user', 'error'); });
 }
 
 // ===== Bulk User Deactivation =====
 function bulkDeactivateNonConsented() {
     if (!confirm('Deactivate all users who have NOT agreed to the privacy policy?')) return;
-    fetch('/api/admin/users/bulk-deactivate-non-consented', { method: 'POST' })
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/users/bulk-deactivate-non-consented', { method: 'POST' })
         .then(function(data) {
-            showToast(data.message || 'Bulk deactivation complete');
+            showToast((data && data.message) || 'Bulk deactivation complete');
             setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(function() { showToast('Error during bulk deactivation', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error during bulk deactivation', 'error'); });
 }
 // Test Button hide
 // function triggerPrivacyDeactivation() {
@@ -129,14 +154,10 @@ function mergeTags() {
         return;
     }
 
-    fetch('/api/admin/tags/merge', {
+    adminFetch('/api/admin/tags/merge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sourceTagIds: sourceIds, targetTagName: targetName })
-    })
-    .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw e; });
-        return r.json();
     })
     .then(function() {
         showToast('Tags merged successfully');
@@ -149,60 +170,57 @@ function mergeTags() {
 
 function cleanupUnusedTags() {
     if (!confirm('Delete all unused tags?')) return;
-    fetch('/api/admin/tags/unused', { method: 'DELETE' })
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/tags/unused', { method: 'DELETE' })
         .then(function(data) {
-            showToast(data.message || 'Unused tags cleaned up');
+            showToast((data && data.message) || 'Unused tags cleaned up');
             setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(function() { showToast('Error cleaning up tags', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error cleaning up tags', 'error'); });
 }
 
 function deleteTag(id) {
     if (!confirm('Delete this tag?')) return;
-    fetch('/api/admin/tags/' + id, { method: 'DELETE' })
+    adminFetch('/api/admin/tags/' + id, { method: 'DELETE' })
         .then(function() {
             showToast('Tag deleted');
             setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(function() { showToast('Error deleting tag', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error deleting tag', 'error'); });
 }
 
 // ===== Backup/Restore =====
 function createBackup() {
-    fetch('/api/admin/backup', { method: 'POST' })
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/backup', { method: 'POST' })
         .then(function(data) {
-            showToast(data.message || 'Backup created');
+            showToast((data && data.message) || 'Backup created');
             setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(function() { showToast('Error creating backup', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error creating backup', 'error'); });
 }
 
 function restoreBackup(filename) {
     if (!confirm('Restore database from ' + filename + '? This will overwrite current data!')) return;
-    fetch('/api/admin/restore', {
+    adminFetch('/api/admin/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: filename })
     })
-    .then(function(r) { return r.json(); })
     .then(function(data) {
-        showToast(data.message || 'Database restored');
+        showToast((data && data.message) || 'Database restored');
         setTimeout(function() { location.reload(); }, 1000);
     })
-    .catch(function() { showToast('Error restoring backup', 'error'); });
+    .catch(function(err) { showToast(err.message || 'Error restoring backup', 'error'); });
 }
 
 // ===== Admin Bookmark Delete =====
 function adminDeleteBookmark(id) {
     if (!confirm('Delete this bookmark?')) return;
-    fetch('/api/admin/bookmarks/' + id, { method: 'DELETE' })
+    adminFetch('/api/admin/bookmarks/' + id, { method: 'DELETE' })
         .then(function() {
             showToast('Bookmark deleted');
             setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(function() { showToast('Error deleting bookmark', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error deleting bookmark', 'error'); });
 }
 
 // ===== Event Delegation =====

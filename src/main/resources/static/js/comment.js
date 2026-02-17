@@ -169,7 +169,7 @@ function submitComment() {
 
     fetch('/api/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ content: content, bookmarkId: bookmarkId })
     })
     .then(function(r) {
@@ -195,7 +195,7 @@ function submitReply(parentId, bmId) {
 
     fetch('/api/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ content: content, bookmarkId: bmId, parentId: parentId })
     })
     .then(function(r) {
@@ -233,7 +233,7 @@ function saveEdit(commentId) {
 
     fetch('/api/comments/' + commentId, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ content: content })
     })
     .then(function(r) {
@@ -252,7 +252,7 @@ function saveEdit(commentId) {
 function deleteComment(commentId) {
     if (!confirm('Delete this comment?')) return;
 
-    fetch('/api/comments/' + commentId, { method: 'DELETE' })
+    fetch('/api/comments/' + commentId, { method: 'DELETE', headers: csrfHeaders() })
     .then(function(r) {
         if (!r.ok) return r.json().then(function(e) { throw e; });
         showToast('Comment deleted');
@@ -266,7 +266,7 @@ function deleteComment(commentId) {
 function voteComment(commentId, voteType) {
     fetch('/api/comments/' + commentId + '/vote', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ voteType: voteType })
     })
     .then(function(r) {

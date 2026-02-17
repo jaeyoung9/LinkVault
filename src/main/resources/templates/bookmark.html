@@ -129,7 +129,7 @@ var currentUserId = /*[[${currentUserId}]]*/ 0;
 var _origDeleteBookmark = deleteBookmark;
 deleteBookmark = function(id) {
     if (!confirm('Delete this post?')) return;
-    fetch('/api/bookmarks/' + id, { method: 'DELETE' })
+    fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: csrfHeaders() })
         .then(function() {
             showToast('Post deleted');
             setTimeout(function() { window.location.href = '/'; }, 500);

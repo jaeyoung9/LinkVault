@@ -81,18 +81,14 @@ function savePolicy(e) {
     var statusEl = document.getElementById('saveStatus');
     statusEl.textContent = 'Saving...';
 
-    fetch('/api/admin/privacy-policy', {
+    adminFetch('/api/admin/privacy-policy', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content })
     })
-    .then(function(r) {
-        if (!r.ok) return r.json().then(function(err) { throw err; });
-        return r.json();
-    })
     .then(function(result) {
         statusEl.textContent = '';
-        showToast('Privacy policy published as v' + result.version);
+        showToast('Privacy policy published as v' + (result ? result.version : ''));
         setTimeout(function() { location.reload(); }, 1000);
     })
     .catch(function(err) {

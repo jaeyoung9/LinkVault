@@ -112,18 +112,17 @@ function generateCode(event) {
         note: document.getElementById('invNote').value || null
     };
 
-    fetch('/api/admin/invitations', {
+    adminFetch('/api/admin/invitations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(function(r) { return r.json(); })
     .then(function(result) {
         closeInvModal();
-        showToast('Code generated: ' + result.code);
+        showToast('Code generated: ' + (result ? result.code : ''));
         loadInvitations();
     })
-    .catch(function() { showToast('Error generating code', 'error'); });
+    .catch(function(err) { showToast(err.message || 'Error generating code', 'error'); });
 }
 
 function copyCode(code) {
@@ -133,16 +132,16 @@ function copyCode(code) {
 }
 
 function toggleInv(id) {
-    fetch('/api/admin/invitations/' + id + '/toggle', { method: 'PATCH' })
+    adminFetch('/api/admin/invitations/' + id + '/toggle', { method: 'PATCH' })
         .then(function() { showToast('Invitation toggled'); loadInvitations(); })
-        .catch(function() { showToast('Error toggling invitation', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error toggling invitation', 'error'); });
 }
 
 function deleteInv(id) {
     if (!confirm('Delete this invitation code?')) return;
-    fetch('/api/admin/invitations/' + id, { method: 'DELETE' })
+    adminFetch('/api/admin/invitations/' + id, { method: 'DELETE' })
         .then(function() { showToast('Invitation deleted'); loadInvitations(); })
-        .catch(function() { showToast('Error deleting invitation', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error deleting invitation', 'error'); });
 }
 
 document.addEventListener('DOMContentLoaded', loadInvitations);

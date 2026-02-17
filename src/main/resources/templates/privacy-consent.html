@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Privacy Policy Consent - LinkVault</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
 <body class="login-body">
 <div class="login-container">
@@ -33,10 +35,17 @@
 <form id="logoutForm" th:action="@{/logout}" method="post" style="display: none;"></form>
 
 <script>
+function csrfHeaders(extra) {
+    var h = extra || {};
+    var token = document.querySelector('meta[name="_csrf"]');
+    var header = document.querySelector('meta[name="_csrf_header"]');
+    if (token && header) h[header.content] = token.content;
+    return h;
+}
 function agreeToPolicy() {
     fetch('/api/auth/privacy-consent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ agree: true })
     })
     .then(function(r) {
@@ -56,7 +65,7 @@ function agreeToPolicy() {
 function declinePolicy() {
     fetch('/api/auth/privacy-consent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ agree: false })
     })
     .then(function() {

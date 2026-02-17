@@ -171,14 +171,10 @@ function saveMenu(event) {
     var method = id ? 'PUT' : 'POST';
     var url = id ? '/api/admin/menus/' + id : '/api/admin/menus';
 
-    fetch(url, {
+    adminFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
-    })
-    .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw e; });
-        return r.json();
     })
     .then(function() {
         closeMenuModal();
@@ -191,16 +187,16 @@ function saveMenu(event) {
 }
 
 function toggleMenuVis(id) {
-    fetch('/api/admin/menus/' + id + '/toggle', { method: 'PATCH' })
+    adminFetch('/api/admin/menus/' + id + '/toggle', { method: 'PATCH' })
         .then(function() { showToast('Visibility toggled'); loadMenuItems(); })
-        .catch(function() { showToast('Error toggling visibility', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error toggling visibility', 'error'); });
 }
 
 function deleteMenu(id) {
     if (!confirm('Delete this menu item?')) return;
-    fetch('/api/admin/menus/' + id, { method: 'DELETE' })
+    adminFetch('/api/admin/menus/' + id, { method: 'DELETE' })
         .then(function() { showToast('Menu item deleted'); loadMenuItems(); })
-        .catch(function() { showToast('Error deleting menu item', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error deleting menu item', 'error'); });
 }
 
 // Load on page ready

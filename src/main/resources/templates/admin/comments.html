@@ -70,23 +70,23 @@ function loadComments() {
 
 function moderateDelete(id) {
     if (!confirm('Soft-delete this comment?')) return;
-    fetch('/api/admin/comments/' + id, { method: 'DELETE' })
+    adminFetch('/api/admin/comments/' + id, { method: 'DELETE' })
         .then(function() { showToast('Comment deleted'); loadComments(); })
-        .catch(function() { showToast('Error deleting comment', 'error'); });
+        .catch(function(err) { showToast(err.message || 'Error deleting comment', 'error'); });
 }
 
 function restoreComment(id) {
     if (!confirm('Restore this comment?')) return;
-    fetch('/api/admin/comments/' + id + '/restore', { method: 'PATCH' })
-        .then(function(r) { if (!r.ok) throw r; showToast('Comment restored'); loadComments(); })
-        .catch(function() { showToast('Error restoring comment', 'error'); });
+    adminFetch('/api/admin/comments/' + id + '/restore', { method: 'PATCH' })
+        .then(function() { showToast('Comment restored'); loadComments(); })
+        .catch(function(err) { showToast(err.message || 'Error restoring comment', 'error'); });
 }
 
 function purgeComment(id) {
     if (!confirm('Permanently delete this comment? This cannot be undone.')) return;
-    fetch('/api/admin/comments/' + id + '/purge', { method: 'DELETE' })
-        .then(function(r) { if (!r.ok) throw r; showToast('Comment permanently deleted'); loadComments(); })
-        .catch(function() { showToast('Error purging comment', 'error'); });
+    adminFetch('/api/admin/comments/' + id + '/purge', { method: 'DELETE' })
+        .then(function() { showToast('Comment permanently deleted'); loadComments(); })
+        .catch(function(err) { showToast(err.message || 'Error purging comment', 'error'); });
 }
 
 document.addEventListener('DOMContentLoaded', loadComments);

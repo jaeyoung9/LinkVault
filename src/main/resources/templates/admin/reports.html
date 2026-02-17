@@ -98,7 +98,7 @@ function loadReports() {
 }
 
 function reviewReport(id, status) {
-    fetch('/api/admin/reports/' + id + '/review', {
+    adminFetch('/api/admin/reports/' + id + '/review', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: status })
@@ -107,7 +107,7 @@ function reviewReport(id, status) {
         showToast('Report updated');
         loadReports();
     })
-    .catch(function() { showToast('Error updating report', 'error'); });
+    .catch(function(err) { showToast(err.message || 'Error updating report', 'error'); });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -71,9 +71,9 @@ document.querySelectorAll('.js-restore-bookmark').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var id = this.getAttribute('data-id');
         if (!confirm('Restore this bookmark?')) return;
-        fetch('/api/admin/bookmarks/' + id + '/restore', { method: 'PATCH' })
-            .then(function(r) { if (!r.ok) throw r; location.reload(); })
-            .catch(function() { alert('Error restoring bookmark'); });
+        adminFetch('/api/admin/bookmarks/' + id + '/restore', { method: 'PATCH' })
+            .then(function() { showToast('Bookmark restored'); location.reload(); })
+            .catch(function(err) { showToast(err.message || 'Error restoring bookmark', 'error'); });
     });
 });
 
@@ -81,9 +81,9 @@ document.querySelectorAll('.js-purge-bookmark').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var id = this.getAttribute('data-id');
         if (!confirm('Permanently delete this bookmark? This cannot be undone.')) return;
-        fetch('/api/admin/bookmarks/' + id + '/purge', { method: 'DELETE' })
-            .then(function(r) { if (!r.ok) throw r; location.reload(); })
-            .catch(function() { alert('Error purging bookmark'); });
+        adminFetch('/api/admin/bookmarks/' + id + '/purge', { method: 'DELETE' })
+            .then(function() { showToast('Bookmark purged'); location.reload(); })
+            .catch(function(err) { showToast(err.message || 'Error purging bookmark', 'error'); });
     });
 });
 </script>

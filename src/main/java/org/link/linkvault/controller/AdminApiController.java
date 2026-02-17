@@ -17,10 +17,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Validated
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -59,15 +63,19 @@ public class AdminApiController {
 
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasAuthority('USER_MANAGE')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.delete(id);
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        userService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/users/{id}/toggle")
     @PreAuthorize("hasAuthority('USER_MANAGE')")
-    public ResponseEntity<UserResponseDto> toggleUser(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.toggleEnabled(id));
+    public ResponseEntity<UserResponseDto> toggleUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(userService.toggleEnabled(id, userDetails.getUsername()));
     }
 
     @PostMapping("/users/bulk-deactivate-non-consented")
@@ -192,8 +200,8 @@ public class AdminApiController {
     @GetMapping("/bookmarks/deleted")
     @PreAuthorize("hasAuthority('BOOKMARK_RESTORE')")
     public ResponseEntity<org.springframework.data.domain.Page<BookmarkResponseDto>> getDeletedBookmarks(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(bookmarkService.findAllDeleted(
                 org.springframework.data.domain.PageRequest.of(page, size,
                         org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "updatedAt"))));
@@ -333,9 +341,8 @@ public class AdminApiController {
     @PatchMapping("/qna/{id}/status")
     @PreAuthorize("hasAuthority('MANAGE_QNA')")
     public ResponseEntity<Map<String, String>> updateQnaStatus(
-            @PathVariable Long id, @RequestBody Map<String, String> body) {
-        org.link.linkvault.entity.QnaStatus status = org.link.linkvault.entity.QnaStatus.valueOf(body.get("status"));
-        qnaArticleService.updateStatus(id, status);
+            @PathVariable Long id, @Valid @RequestBody QnaStatusUpdateRequestDto dto) {
+        qnaArticleService.updateStatus(id, dto.getStatus());
         return ResponseEntity.ok(Map.of("message", "Status updated"));
     }
 
@@ -367,9 +374,8 @@ public class AdminApiController {
     @PatchMapping("/announcements/{id}/status")
     @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
     public ResponseEntity<Map<String, String>> updateAnnouncementStatus(
-            @PathVariable Long id, @RequestBody Map<String, String> body) {
-        org.link.linkvault.entity.AnnouncementStatus status = org.link.linkvault.entity.AnnouncementStatus.valueOf(body.get("status"));
-        announcementService.updateStatus(id, status);
+            @PathVariable Long id, @Valid @RequestBody AnnouncementStatusUpdateRequestDto dto) {
+        announcementService.updateStatus(id, dto.getStatus());
         return ResponseEntity.ok(Map.of("message", "Status updated"));
     }
 
@@ -386,8 +392,8 @@ public class AdminApiController {
     @PreAuthorize("hasAuthority('REPORT_REVIEW')")
     public ResponseEntity<Page<ReportResponseDto>> getReports(
             @RequestParam(required = false) ReportStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         if (status != null) {
             return ResponseEntity.ok(reportService.findByStatus(status, pageable));
@@ -399,11 +405,10 @@ public class AdminApiController {
     @PreAuthorize("hasAuthority('REPORT_REVIEW')")
     public ResponseEntity<ReportResponseDto> reviewReport(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body,
+            @Valid @RequestBody ReportStatusUpdateRequestDto dto,
             @AuthenticationPrincipal UserDetails userDetails) {
         User reviewer = userService.getUserEntity(userDetails.getUsername());
-        ReportStatus status = ReportStatus.valueOf(body.get("status"));
-        return ResponseEntity.ok(reportService.review(id, reviewer, status));
+        return ResponseEntity.ok(reportService.review(id, reviewer, dto.getStatus()));
     }
 
     // --- Privacy Policy Management ---

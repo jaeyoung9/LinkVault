@@ -58,7 +58,8 @@ public class SecurityConfig {
                 .permitAll()
             .and()
             .csrf()
-                .ignoringAntMatchers("/api/**", "/h2-console/**")
+                .ignoringAntMatchers("/api/auth/register", "/api/auth/validate-code",
+                                     "/api/auth/privacy-policy", "/h2-console/**")
             .and()
             .headers()
                 .frameOptions().sameOrigin();

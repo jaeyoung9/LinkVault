@@ -105,9 +105,18 @@ public class UserService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actorUsername) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        if (user.getUsername().equals(actorUsername)) {
+            throw new IllegalStateException("Cannot delete your own account");
+        }
+        if (user.getRole() == Role.SUPER_ADMIN
+                && userRepository.countByRoleAndEnabledTrue(Role.SUPER_ADMIN) <= 1) {
+            throw new IllegalStateException("Cannot delete the last enabled SUPER_ADMIN");
+        }
+
         Long userId = user.getId();
 
         // 1. Delete comment votes cast by this user
@@ -189,9 +198,19 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDto toggleEnabled(Long id) {
+    public UserResponseDto toggleEnabled(Long id, String actorUsername) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        if (user.getUsername().equals(actorUsername)) {
+            throw new IllegalStateException("Cannot disable your own account");
+        }
+        // Prevent disabling the last enabled SUPER_ADMIN
+        if (user.isEnabled() && user.getRole() == Role.SUPER_ADMIN
+                && userRepository.countByRoleAndEnabledTrue(Role.SUPER_ADMIN) <= 1) {
+            throw new IllegalStateException("Cannot disable the last enabled SUPER_ADMIN");
+        }
+
         user.setEnabled(!user.isEnabled());
         return UserResponseDto.from(user, userRepository.countBookmarksByUserId(user.getId()));
     }

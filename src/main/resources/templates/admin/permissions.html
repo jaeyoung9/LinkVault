@@ -78,14 +78,10 @@ function loadPermissions() {
 }
 
 function togglePermission(role, permissionId, granted) {
-    fetch('/api/admin/permissions/toggle', {
+    adminFetch('/api/admin/permissions/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: role, permissionId: permissionId, granted: granted })
-    })
-    .then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw e; });
-        return r.json();
     })
     .then(function() {
         showToast('Permission updated');

@@ -76,7 +76,7 @@ var articleId = /*[[${article.id}]]*/ 0;
 function submitQnaFeedback(helpful) {
     fetch('/api/qna/' + articleId + '/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ helpful: helpful })
     })
     .then(function(r) { return r.json(); })
