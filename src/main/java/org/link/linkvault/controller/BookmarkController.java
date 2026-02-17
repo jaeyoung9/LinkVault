@@ -45,8 +45,10 @@ public class BookmarkController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BookmarkResponseDto> getBookmark(@PathVariable Long id) {
-        return ResponseEntity.ok(bookmarkService.findById(id));
+    public ResponseEntity<BookmarkResponseDto> getBookmark(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(bookmarkService.findById(id, getUser(userDetails)));
     }
 
     // JSON-only create (backward compatible)
@@ -146,8 +148,10 @@ public class BookmarkController {
     // --- Access tracking ---
 
     @PostMapping("/{id}/access")
-    public ResponseEntity<BookmarkResponseDto> recordAccess(@PathVariable Long id) {
-        return ResponseEntity.ok(bookmarkService.recordAccess(id));
+    public ResponseEntity<BookmarkResponseDto> recordAccess(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(bookmarkService.recordAccess(id, getUser(userDetails)));
     }
 
     @GetMapping("/frequent")

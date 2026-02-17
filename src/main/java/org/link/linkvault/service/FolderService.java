@@ -69,6 +69,10 @@ public class FolderService {
         if (requestDto.getParentId() != null) {
             Folder parent = folderRepository.findById(requestDto.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent folder not found with id: " + requestDto.getParentId()));
+            // Verify ownership of parent folder
+            if (!isAdmin(currentUser) && (parent.getUser() == null || !parent.getUser().getId().equals(currentUser.getId()))) {
+                throw new SecurityException("Access denied");
+            }
             folder.setParent(parent);
             folder.setDisplayOrder(parent.getChildren().size());
         } else {
@@ -122,6 +126,10 @@ public class FolderService {
             }
             Folder target = folderRepository.findById(moveDto.getTargetFolderId())
                     .orElseThrow(() -> new ResourceNotFoundException("Target folder not found"));
+            // Verify ownership of target folder
+            if (!isAdmin(currentUser) && (target.getUser() == null || !target.getUser().getId().equals(currentUser.getId()))) {
+                throw new SecurityException("Access denied");
+            }
             // Prevent moving into own descendant
             Folder check = target;
             while (check != null) {

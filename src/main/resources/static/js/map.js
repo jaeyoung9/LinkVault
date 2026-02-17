@@ -118,7 +118,7 @@ function initComposeSearch() {
                 resultsDiv.style.display = 'block';
             })
             .catch(function() { resultsDiv.style.display = 'none'; });
-        }, 400);
+        }, 150);
     }
 
     // Wire bmLocationSearch

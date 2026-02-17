@@ -1,0 +1,26 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  h2:
+    console:
+      enabled: false
+
+  thymeleaf:
+    cache: true
+
+app:
+  init:
+    seed-sample-data: false
+  security:
+    ssrf:
+      allow-local: false
+
+logging:
+  level:
+    org.springframework.security: WARN

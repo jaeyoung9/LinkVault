@@ -61,9 +61,19 @@ public class BookmarkService {
                 .collect(Collectors.toList());
     }
 
-    public BookmarkResponseDto findById(Long id) {
+    public BookmarkResponseDto findById(Long id, User currentUser) {
         Bookmark bookmark = bookmarkRepository.findWithTagsAndFolderById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
+
+        if (bookmark.isPrivatePost()) {
+            boolean isOwner = currentUser != null && bookmark.getUser() != null
+                    && bookmark.getUser().getId().equals(currentUser.getId());
+            boolean isAdminUser = currentUser != null && isAdmin(currentUser);
+            if (!isOwner && !isAdminUser) {
+                throw new SecurityException("Access denied");
+            }
+        }
+
         return BookmarkResponseDto.from(bookmark);
     }
 
@@ -78,7 +88,7 @@ public class BookmarkService {
             throw new DuplicateUrlException("Bookmark already exists with URL: " + url);
         }
 
-        Folder folder = resolveFolder(requestDto.getFolderId());
+        Folder folder = resolveFolder(currentUser, requestDto.getFolderId());
 
         String title = requestDto.getTitle();
         String description = requestDto.getDescription();
@@ -188,7 +198,7 @@ public class BookmarkService {
 
         bookmark.update(requestDto.getTitle(), hasNewUrl ? newUrl : null, requestDto.getDescription(),
                 requestDto.getLatitude(), requestDto.getLongitude(), requestDto.getAddress(), requestDto.getCaption(), requestDto.getMapEmoji());
-        bookmark.setFolder(resolveFolder(requestDto.getFolderId()));
+        bookmark.setFolder(resolveFolder(currentUser, requestDto.getFolderId()));
         bookmark.setPrivatePost(Boolean.TRUE.equals(requestDto.getPrivatePost()));
 
         // Refresh favicon if URL changed
@@ -274,9 +284,19 @@ public class BookmarkService {
     // --- Access tracking ---
 
     @Transactional
-    public BookmarkResponseDto recordAccess(Long id) {
+    public BookmarkResponseDto recordAccess(Long id, User currentUser) {
         Bookmark bookmark = bookmarkRepository.findWithTagsAndFolderById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
+
+        if (bookmark.isPrivatePost()) {
+            boolean isOwner = currentUser != null && bookmark.getUser() != null
+                    && bookmark.getUser().getId().equals(currentUser.getId());
+            boolean isAdminUser = currentUser != null && isAdmin(currentUser);
+            if (!isOwner && !isAdminUser) {
+                throw new SecurityException("Access denied");
+            }
+        }
+
         bookmark.recordAccess();
         return BookmarkResponseDto.from(bookmark);
     }
@@ -358,7 +378,7 @@ public class BookmarkService {
             throw new SecurityException("Access denied");
         }
 
-        bookmark.setFolder(resolveFolder(folderId));
+        bookmark.setFolder(resolveFolder(currentUser, folderId));
         return BookmarkResponseDto.from(bookmark);
     }
 
@@ -387,6 +407,16 @@ public class BookmarkService {
         if (folderId == null) return null;
         return folderRepository.findById(folderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Folder not found with id: " + folderId));
+    }
+
+    private Folder resolveFolder(User user, Long folderId) {
+        if (folderId == null) return null;
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Folder not found with id: " + folderId));
+        if (!isAdmin(user) && (folder.getUser() == null || !folder.getUser().getId().equals(user.getId()))) {
+            throw new SecurityException("Access denied");
+        }
+        return folder;
     }
 
     private void processPhotos(Bookmark bookmark, List<MultipartFile> photos) {

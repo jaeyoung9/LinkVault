@@ -3,14 +3,13 @@ package org.link.linkvault.controller;
 import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.RegisterRequestDto;
 import org.link.linkvault.entity.InvitationCode;
-import org.link.linkvault.entity.Role;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.dto.PrivacyPolicyResponseDto;
 import org.link.linkvault.repository.UserRepository;
+import org.link.linkvault.service.AuthService;
 import org.link.linkvault.service.InvitationService;
 import org.link.linkvault.service.PrivacyPolicyService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,45 +24,13 @@ import java.util.Map;
 public class AuthController {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthService authService;
     private final InvitationService invitationService;
     private final PrivacyPolicyService privacyPolicyService;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequestDto dto) {
-        // Validate invitation code
-        InvitationCode invitation = invitationService.validate(dto.getInvitationCode());
-
-        // Check username/email uniqueness
-        if (userRepository.existsByUsername(dto.getUsername())) {
-            throw new IllegalArgumentException("Username already exists: " + dto.getUsername());
-        }
-        if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + dto.getEmail());
-        }
-
-        // Determine role from invitation code
-        Role role = invitation.getAssignedRole() != null ? invitation.getAssignedRole() : Role.MEMBER;
-
-        // Create user
-        User user = User.builder()
-                .username(dto.getUsername())
-                .email(dto.getEmail())
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .role(role)
-                .enabled(true)
-                .build();
-        // Record privacy policy agreement
-        PrivacyPolicyResponseDto activePolicy = privacyPolicyService.getActivePolicy();
-        if (activePolicy != null) {
-            user.agreeToPrivacyPolicy(activePolicy.getVersion());
-        }
-
-        user = userRepository.save(user);
-
-        // Record invitation use
-        invitationService.consume(invitation, user);
-
+        authService.registerWithInvitation(dto);
         return ResponseEntity.ok(Map.of("message", "Registration successful. You can now log in."));
     }
 
@@ -84,6 +51,10 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> privacyConsent(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, Boolean> body) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Authentication required"));
+        }
+
         boolean agree = Boolean.TRUE.equals(body.get("agree"));
 
         if (agree) {

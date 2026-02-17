@@ -68,9 +68,15 @@ public class InvitationService {
 
     @Transactional
     public void consume(InvitationCode invitation, User user) {
-        // Re-fetch to get a managed entity (invitation is detached from validate()'s read-only tx)
-        InvitationCode managed = invitationCodeRepository.findById(invitation.getId())
+        // Re-fetch with pessimistic lock to prevent race conditions
+        InvitationCode managed = invitationCodeRepository.findByIdForUpdate(invitation.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation code not found"));
+
+        // Re-check usability under lock (another request may have consumed the last use)
+        if (!managed.isUsable()) {
+            throw new IllegalArgumentException("Invitation code is no longer valid");
+        }
+
         managed.recordUse();
         invitationUseRepository.save(new InvitationUse(managed, user));
     }

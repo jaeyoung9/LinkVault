@@ -6,11 +6,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -21,6 +23,8 @@ public class DatabaseBackupService {
     private final JdbcTemplate jdbcTemplate;
 
     private static final String BACKUP_DIR = "backups";
+    private static final Pattern BACKUP_FILENAME_PATTERN =
+            Pattern.compile("^linkvault_backup_\\d{8}_\\d{6}\\.sql$");
 
     public String createBackup() {
         File dir = new File(BACKUP_DIR);
@@ -42,7 +46,7 @@ public class DatabaseBackupService {
         if (!dir.exists() || !dir.isDirectory()) {
             return new ArrayList<>();
         }
-        String[] files = dir.list((d, name) -> name.startsWith("linkvault_backup_") && name.endsWith(".sql"));
+        String[] files = dir.list((d, name) -> BACKUP_FILENAME_PATTERN.matcher(name).matches());
         if (files == null) {
             return new ArrayList<>();
         }
@@ -52,7 +56,28 @@ public class DatabaseBackupService {
     }
 
     public void restoreBackup(String filename) {
-        File file = new File(BACKUP_DIR, filename);
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalArgumentException("Filename must not be empty");
+        }
+
+        if (!BACKUP_FILENAME_PATTERN.matcher(filename).matches()) {
+            throw new IllegalArgumentException("Invalid backup filename format");
+        }
+
+        File baseDir = new File(BACKUP_DIR);
+        File file = new File(baseDir, filename);
+
+        // Path traversal protection
+        try {
+            String basePath = baseDir.getCanonicalPath();
+            String targetPath = file.getCanonicalPath();
+            if (!targetPath.startsWith(basePath + File.separator) && !targetPath.equals(basePath)) {
+                throw new IllegalArgumentException("Invalid backup filename");
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Invalid backup filename");
+        }
+
         if (!file.exists()) {
             throw new IllegalArgumentException("Backup file not found: " + filename);
         }

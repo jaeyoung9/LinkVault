@@ -36,6 +36,11 @@ spring:
 server:
   port: 8088
 
+app:
+  security:
+    ssrf:
+      allow-local: true
+
 linkvault:
   file-vault:
     upload-path: ./uploads/photos

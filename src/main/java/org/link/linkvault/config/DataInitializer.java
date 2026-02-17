@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.link.linkvault.entity.*;
 import org.link.linkvault.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -28,15 +29,44 @@ public class DataInitializer implements CommandLineRunner {
     private final SystemSettingsRepository systemSettingsRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.init.seed-sample-data:true}")
+    private boolean seedSampleData;
+
     @Override
     @Transactional
     public void run(String... args) {
         initPermissions();
-        initUsers();
         initMenuItems();
-        initInvitationCode();
         initPrivacyPolicy();
         initSystemSettings();
+
+        if (seedSampleData) {
+            initUsers();
+            initInvitationCode();
+        } else {
+            initBootstrapAdmin();
+        }
+    }
+
+    private void initBootstrapAdmin() {
+        if (userRepository.count() > 0) {
+            return;
+        }
+        String adminPassword = System.getenv("LINKVAULT_ADMIN_PASSWORD");
+        if (adminPassword == null || adminPassword.isBlank()) {
+            log.warn("No LINKVAULT_ADMIN_PASSWORD env var set; skipping admin bootstrap");
+            return;
+        }
+        String adminEmail = System.getenv().getOrDefault("LINKVAULT_ADMIN_EMAIL", "admin@linkvault.com");
+        User admin = User.builder()
+                .username("admin")
+                .email(adminEmail)
+                .password(passwordEncoder.encode(adminPassword))
+                .role(Role.SUPER_ADMIN)
+                .enabled(true)
+                .build();
+        userRepository.save(admin);
+        log.info("Bootstrap admin created (password from env)");
     }
 
     private void initPermissions() {

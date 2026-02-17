@@ -148,6 +148,9 @@ public class AdminApiController {
     @PreAuthorize("hasAuthority('BACKUP_RUN')")
     public ResponseEntity<Map<String, String>> restoreBackup(@RequestBody Map<String, String> body) {
         String filename = body.get("filename");
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalArgumentException("Filename is required");
+        }
         databaseBackupService.restoreBackup(filename);
         return ResponseEntity.ok(Map.of("message", "Database restored from: " + filename));
     }

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import org.link.linkvault.entity.Role;
-import org.link.linkvault.exception.ResourceNotFoundException;
 
 import java.util.List;
 
@@ -134,15 +133,7 @@ public class WebController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id, Model model) {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
-        BookmarkResponseDto bookmark = bookmarkService.findById(id);
-
-        // Private post access control (admins can always view)
-        boolean isAdmin = currentUser.getRole() == Role.SUPER_ADMIN
-                || currentUser.getRole() == Role.COMMUNITY_ADMIN
-                || currentUser.getRole() == Role.MODERATOR;
-        if (bookmark.isPrivatePost() && !isAdmin && !currentUser.getUsername().equals(bookmark.getOwnerUsername())) {
-            throw new ResourceNotFoundException("Bookmark not found with id: " + id);
-        }
+        BookmarkResponseDto bookmark = bookmarkService.findById(id, currentUser);
 
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmark", bookmark);
