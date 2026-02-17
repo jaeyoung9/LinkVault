@@ -3,6 +3,7 @@ package org.link.linkvault.controller;
 import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.BookmarkResponseDto;
 import org.link.linkvault.dto.FolderResponseDto;
+import org.link.linkvault.dto.PrivacyPolicyResponseDto;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.service.*;
 import org.springframework.data.domain.Page;
@@ -30,14 +31,38 @@ public class WebController {
     private final QnaArticleService qnaArticleService;
     private final AnnouncementService announcementService;
     private final UserSettingsService userSettingsService;
+    private final PrivacyPolicyService privacyPolicyService;
 
     @GetMapping("/login")
     public String login() {
         return "login";
     }
 
+    @GetMapping("/privacy-consent")
+    public String privacyConsent(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        PrivacyPolicyResponseDto policy = privacyPolicyService.getActivePolicy();
+
+        // Already consented → redirect to home
+        if (policy != null && currentUser.getPrivacyAgreedVersion() != null
+                && currentUser.getPrivacyAgreedVersion() == policy.getVersion()) {
+            return "redirect:/";
+        }
+
+        if (policy != null) {
+            model.addAttribute("policyContent", policy.getContent());
+            model.addAttribute("policyVersion", policy.getVersion());
+        }
+        return "privacy-consent";
+    }
+
     @GetMapping("/register")
-    public String register() {
+    public String register(Model model) {
+        PrivacyPolicyResponseDto policy = privacyPolicyService.getActivePolicy();
+        if (policy != null) {
+            model.addAttribute("privacyPolicyContent", policy.getContent());
+            model.addAttribute("privacyPolicyVersion", policy.getVersion());
+        }
         return "register";
     }
 

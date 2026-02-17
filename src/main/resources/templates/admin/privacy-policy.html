@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Privacy Policy Management - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Privacy Policy Management</h2>
+            <div th:if="${activePolicy != null}" style="font-size: 0.85rem; color: var(--text-secondary);">
+                Current Version: <strong th:text="'v' + ${activePolicy.version}">v1</strong>
+                &nbsp;|&nbsp; Last updated:
+                <span th:text="${activePolicy.updatedAt != null} ? ${#temporals.format(activePolicy.updatedAt, 'yyyy-MM-dd HH:mm')} : ${#temporals.format(activePolicy.createdAt, 'yyyy-MM-dd HH:mm')}">-</span>
+                <span th:if="${activePolicy.updatedByUsername != null}">
+                    by <strong th:text="${activePolicy.updatedByUsername}">admin</strong>
+                </span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <form id="policyForm" onsubmit="savePolicy(event)">
+                <div class="form-group">
+                    <label for="policyContent">Policy Content (HTML supported)</label>
+                    <textarea id="policyContent" class="form-control" rows="18"
+                              placeholder="Enter your privacy policy content here..."
+                              style="min-height: 300px; font-family: monospace; font-size: 0.85rem; line-height: 1.6;"
+                              th:text="${activePolicy != null} ? ${activePolicy.content} : ''"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="submit" class="btn btn-primary">Save &amp; Publish</button>
+                    <span id="saveStatus" style="font-size: 0.82rem; color: var(--text-secondary);"></span>
+                </div>
+            </form>
+        </div>
+
+        <h3 style="margin-bottom: 12px;">Version History</h3>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Version</th>
+                <th>Status</th>
+                <th>Updated By</th>
+                <th>Created</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="policy : ${history}">
+                <td th:text="'v' + ${policy.version}">v1</td>
+                <td>
+                    <span class="badge" th:classappend="${policy.active} ? 'badge-success' : 'badge-danger'"
+                          th:text="${policy.active} ? 'Active' : 'Inactive'">Active</span>
+                </td>
+                <td th:text="${policy.updatedByUsername != null} ? ${policy.updatedByUsername} : 'system'">admin</td>
+                <td th:text="${policy.createdAt != null} ? ${#temporals.format(policy.createdAt, 'yyyy-MM-dd HH:mm')} : '-'">-</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(history)}">
+                <td colspan="4" style="text-align: center; color: var(--text-secondary);">No policy versions yet</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function savePolicy(e) {
+    e.preventDefault();
+    var content = document.getElementById('policyContent').value;
+    if (!content.trim()) {
+        showToast('Policy content cannot be empty', 'error');
+        return;
+    }
+
+    var statusEl = document.getElementById('saveStatus');
+    statusEl.textContent = 'Saving...';
+
+    fetch('/api/admin/privacy-policy', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function(result) {
+        statusEl.textContent = '';
+        showToast('Privacy policy published as v' + result.version);
+        setTimeout(function() { location.reload(); }, 1000);
+    })
+    .catch(function(err) {
+        statusEl.textContent = '';
+        showToast(err.message || 'Error saving policy', 'error');
+    });
+}
+</script>
+</body>
+</html>

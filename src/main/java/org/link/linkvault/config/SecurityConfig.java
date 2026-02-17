@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -19,6 +20,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
+    private final PrivacyConsentSuccessHandler privacyConsentSuccessHandler;
+    private final PrivacyConsentFilter privacyConsentFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,7 +48,7 @@ public class SecurityConfig {
             .and()
             .formLogin()
                 .loginPage("/login")
-                .defaultSuccessUrl("/", true)
+                .successHandler(privacyConsentSuccessHandler)
                 .permitAll()
             .and()
             .logout()
@@ -57,6 +60,8 @@ public class SecurityConfig {
             .and()
             .headers()
                 .frameOptions().sameOrigin();
+
+        http.addFilterAfter(privacyConsentFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

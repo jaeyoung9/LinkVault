@@ -21,6 +21,10 @@ public class UserResponseDto {
     private LocalDateTime lastLoginAt;
     private long bookmarkCount;
     private List<String> permissions;
+    private LocalDateTime privacyAgreedAt;
+    private Integer privacyAgreedVersion;
+    private LocalDateTime deactivatedAt;
+    private String deactivationReason;
 
     public static UserResponseDto from(User user, long bookmarkCount) {
         return UserResponseDto.builder()
@@ -32,6 +36,10 @@ public class UserResponseDto {
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
                 .bookmarkCount(bookmarkCount)
+                .privacyAgreedAt(user.getPrivacyAgreedAt())
+                .privacyAgreedVersion(user.getPrivacyAgreedVersion())
+                .deactivatedAt(user.getDeactivatedAt())
+                .deactivationReason(user.getDeactivationReason())
                 .build();
     }
 }

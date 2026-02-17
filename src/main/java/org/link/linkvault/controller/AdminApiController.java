@@ -33,6 +33,7 @@ public class AdminApiController {
     private final CommentService commentService;
     private final QnaArticleService qnaArticleService;
     private final AnnouncementService announcementService;
+    private final PrivacyPolicyService privacyPolicyService;
 
     // --- User CRUD ---
 
@@ -350,5 +351,33 @@ public class AdminApiController {
     public ResponseEntity<Void> deleteAnnouncement(@PathVariable Long id) {
         announcementService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- Privacy Policy Management ---
+
+    @GetMapping("/privacy-policy")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<PrivacyPolicyResponseDto> getActivePrivacyPolicy() {
+        PrivacyPolicyResponseDto policy = privacyPolicyService.getActivePolicy();
+        if (policy == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(policy);
+    }
+
+    @PutMapping("/privacy-policy")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<PrivacyPolicyResponseDto> updatePrivacyPolicy(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody Map<String, String> body) {
+        User admin = userService.getUserEntity(userDetails.getUsername());
+        String content = body.get("content");
+        return ResponseEntity.ok(privacyPolicyService.update(content, admin));
+    }
+
+    @GetMapping("/privacy-policy/history")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<PrivacyPolicyResponseDto>> getPrivacyPolicyHistory() {
+        return ResponseEntity.ok(privacyPolicyService.findAll());
     }
 }

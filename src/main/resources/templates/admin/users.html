@@ -26,6 +26,7 @@
                 <th>Role</th>
                 <th>Bookmarks</th>
                 <th>Created</th>
+                <th>Privacy</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -43,8 +44,16 @@
                 <td th:text="${user.bookmarkCount}">0</td>
                 <td th:text="${user.createdAt != null} ? ${#temporals.format(user.createdAt, 'yyyy-MM-dd')} : '-'">2024-01-01</td>
                 <td>
+                    <span th:if="${user.privacyAgreedVersion != null}" class="badge badge-success"
+                          th:text="'Agreed (v' + ${user.privacyAgreedVersion} + ')'">Agreed (v1)</span>
+                    <span th:if="${user.privacyAgreedVersion == null}" class="badge badge-danger">Not Agreed</span>
+                </td>
+                <td>
                     <span class="badge" th:classappend="${user.enabled} ? 'badge-success' : 'badge-danger'"
                           th:text="${user.enabled} ? 'Active' : 'Disabled'">Active</span>
+                    <div th:if="${!user.enabled and user.deactivationReason != null}"
+                         style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 3px;"
+                         th:text="${user.deactivationReason}"></div>
                 </td>
                 <td>
                     <button class="btn btn-sm btn-outline js-edit-user"

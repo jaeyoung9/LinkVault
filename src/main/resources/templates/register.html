@@ -33,6 +33,21 @@
                 <label for="regPassword">Password *</label>
                 <input type="password" id="regPassword" class="form-control" placeholder="Min 6 characters" required minlength="6"/>
             </div>
+            <div class="form-group" style="margin-top: 12px;">
+                <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                    <button type="button" id="privacyToggle" onclick="togglePrivacy()"
+                            style="width: 100%; background: var(--bg-card); border: none; padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); font-size: 0.85rem; font-weight: 600;">
+                        <span>Privacy Policy <span th:if="${privacyPolicyVersion != null}" th:text="'(v' + ${privacyPolicyVersion} + ')'" style="font-weight: normal; font-size: 0.78rem; color: var(--text-secondary);"></span></span>
+                        <span id="privacyArrow" style="transition: transform 0.2s;">&#9660;</span>
+                    </button>
+                    <div id="privacyContent" style="display: none; padding: 14px; font-size: 0.78rem; color: var(--text-secondary); max-height: 260px; overflow-y: auto; border-top: 1px solid var(--border); line-height: 1.6;"
+                         th:utext="${privacyPolicyContent} ?: 'No privacy policy has been configured yet.'"></div>
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.82rem; cursor: pointer;">
+                    <input type="checkbox" id="privacyAgree" required/>
+                    I have read and agree to the Privacy Policy
+                </label>
+            </div>
             <button type="submit" class="btn btn-primary btn-block">Register</button>
         </form>
 
@@ -65,6 +80,18 @@ document.getElementById('invCode').addEventListener('blur', function() {
             status.style.color = 'var(--danger)';
         });
 });
+
+function togglePrivacy() {
+    var content = document.getElementById('privacyContent');
+    var arrow = document.getElementById('privacyArrow');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+    }
+}
 
 function handleRegister(event) {
     event.preventDefault();

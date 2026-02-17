@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Privacy Policy Consent - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="login-body">
+<div class="login-container">
+    <div class="login-card" style="max-width: 560px;">
+        <h1 style="color: var(--accent); margin-bottom: 4px;">LinkVault</h1>
+        <p class="login-subtitle">Privacy Policy Update</p>
+
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 12px;">
+            A new privacy policy <span th:if="${policyVersion != null}" th:text="'(v' + ${policyVersion} + ')'" style="font-weight: 600;"></span>
+            has been published. Please review and agree to continue using LinkVault.
+        </p>
+
+        <div style="border: 1px solid var(--border); border-radius: 8px; margin-top: 16px; padding: 16px; max-height: 340px; overflow-y: auto; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.7;"
+             th:utext="${policyContent} ?: 'No policy content available.'"></div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="button" class="btn btn-primary" style="flex: 1;" onclick="agreeToPolicy()">I Agree</button>
+            <button type="button" class="btn btn-outline" style="flex: 1;" onclick="declinePolicy()">Decline</button>
+        </div>
+
+        <div id="errorAlert" class="alert alert-danger" style="display: none; margin-top: 12px;"></div>
+    </div>
+</div>
+
+<!-- Hidden logout form for CSRF-safe logout on decline -->
+<form id="logoutForm" th:action="@{/logout}" method="post" style="display: none;"></form>
+
+<script>
+function agreeToPolicy() {
+    fetch('/api/auth/privacy-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agree: true })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw e; });
+        return r.json();
+    })
+    .then(function() {
+        window.location.href = '/';
+    })
+    .catch(function(err) {
+        var el = document.getElementById('errorAlert');
+        el.textContent = err.message || 'Failed to save consent. Please try again.';
+        el.style.display = '';
+    });
+}
+
+function declinePolicy() {
+    fetch('/api/auth/privacy-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agree: false })
+    })
+    .then(function() {
+        document.getElementById('logoutForm').submit();
+    })
+    .catch(function() {
+        document.getElementById('logoutForm').submit();
+    });
+}
+</script>
+</body>
+</html>

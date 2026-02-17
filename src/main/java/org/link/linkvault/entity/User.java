@@ -44,6 +44,15 @@ public class User {
 
     private LocalDateTime lastLoginAt;
 
+    private LocalDateTime privacyAgreedAt;
+
+    private Integer privacyAgreedVersion;
+
+    private LocalDateTime deactivatedAt;
+
+    @Column(length = 200)
+    private String deactivationReason;
+
     @OneToMany(mappedBy = "user")
     private List<Bookmark> bookmarks = new ArrayList<>();
 
@@ -82,5 +91,16 @@ public class User {
 
     public void recordLogin() {
         this.lastLoginAt = LocalDateTime.now();
+    }
+
+    public void agreeToPrivacyPolicy(int version) {
+        this.privacyAgreedAt = LocalDateTime.now();
+        this.privacyAgreedVersion = version;
+    }
+
+    public void deactivateForPrivacy(String reason) {
+        this.enabled = false;
+        this.deactivatedAt = LocalDateTime.now();
+        this.deactivationReason = reason;
     }
 }

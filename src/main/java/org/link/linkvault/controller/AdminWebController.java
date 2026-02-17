@@ -28,6 +28,7 @@ public class AdminWebController {
     private final DatabaseBackupService databaseBackupService;
     private final QnaArticleService qnaArticleService;
     private final AnnouncementService announcementService;
+    private final PrivacyPolicyService privacyPolicyService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_STATS')")
@@ -131,5 +132,13 @@ public class AdminWebController {
             Model model) {
         model.addAttribute("announcements", announcementService.findAllAdmin(PageRequest.of(page, size)));
         return "admin/announcements";
+    }
+
+    @GetMapping("/privacy-policy")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public String privacyPolicy(Model model) {
+        model.addAttribute("activePolicy", privacyPolicyService.getActivePolicy());
+        model.addAttribute("history", privacyPolicyService.findAll());
+        return "admin/privacy-policy";
     }
 }
