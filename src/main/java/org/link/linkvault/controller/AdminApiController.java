@@ -2,9 +2,13 @@ package org.link.linkvault.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.*;
+import org.link.linkvault.entity.ReportStatus;
 import org.link.linkvault.entity.Role;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.service.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -34,6 +39,9 @@ public class AdminApiController {
     private final QnaArticleService qnaArticleService;
     private final AnnouncementService announcementService;
     private final PrivacyPolicyService privacyPolicyService;
+    private final ReportService reportService;
+    private final SystemSettingsService systemSettingsService;
+    private final FileVaultService fileVaultService;
 
     // --- User CRUD ---
 
@@ -369,6 +377,32 @@ public class AdminApiController {
         return ResponseEntity.noContent().build();
     }
 
+    // --- Report Moderation ---
+
+    @GetMapping("/reports")
+    @PreAuthorize("hasAuthority('REPORT_REVIEW')")
+    public ResponseEntity<Page<ReportResponseDto>> getReports(
+            @RequestParam(required = false) ReportStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (status != null) {
+            return ResponseEntity.ok(reportService.findByStatus(status, pageable));
+        }
+        return ResponseEntity.ok(reportService.findAll(pageable));
+    }
+
+    @PatchMapping("/reports/{id}/review")
+    @PreAuthorize("hasAuthority('REPORT_REVIEW')")
+    public ResponseEntity<ReportResponseDto> reviewReport(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User reviewer = userService.getUserEntity(userDetails.getUsername());
+        ReportStatus status = ReportStatus.valueOf(body.get("status"));
+        return ResponseEntity.ok(reportService.review(id, reviewer, status));
+    }
+
     // --- Privacy Policy Management ---
 
     @GetMapping("/privacy-policy")
@@ -395,5 +429,36 @@ public class AdminApiController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<PrivacyPolicyResponseDto>> getPrivacyPolicyHistory() {
         return ResponseEntity.ok(privacyPolicyService.findAll());
+    }
+
+    // --- System Settings ---
+
+    @GetMapping("/settings")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<List<SystemSettingsResponseDto>> getAllSettings() {
+        return ResponseEntity.ok(systemSettingsService.findAll().stream()
+                .map(SystemSettingsResponseDto::from)
+                .collect(Collectors.toList()));
+    }
+
+    @GetMapping("/settings/category/{category}")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<List<SystemSettingsResponseDto>> getSettingsByCategory(@PathVariable String category) {
+        return ResponseEntity.ok(systemSettingsService.findByCategory(category).stream()
+                .map(SystemSettingsResponseDto::from)
+                .collect(Collectors.toList()));
+    }
+
+    @PutMapping("/settings/{key}")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<SystemSettingsResponseDto> updateSetting(
+            @PathVariable String key,
+            @RequestBody Map<String, String> body) {
+        String value = body.get("value");
+        var updated = systemSettingsService.updateValue(key, value);
+        if (key.startsWith("file-vault.")) {
+            fileVaultService.reloadSettings();
+        }
+        return ResponseEntity.ok(SystemSettingsResponseDto.from(updated));
     }
 }

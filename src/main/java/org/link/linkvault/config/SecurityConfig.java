@@ -41,7 +41,7 @@ public class SecurityConfig {
         http
             .authenticationProvider(authenticationProvider())
             .authorizeRequests()
-                .antMatchers("/css/**", "/js/**", "/login", "/register", "/api/auth/**", "/error").permitAll()
+                .antMatchers("/css/**", "/js/**", "/files/**", "/login", "/register", "/api/auth/**", "/error").permitAll()
                 .antMatchers("/admin/**", "/api/admin/**").hasAnyRole("SUPER_ADMIN", "COMMUNITY_ADMIN", "MODERATOR")
                 .antMatchers("/h2-console/**").hasAnyRole("SUPER_ADMIN", "COMMUNITY_ADMIN")
                 .anyRequest().authenticated()

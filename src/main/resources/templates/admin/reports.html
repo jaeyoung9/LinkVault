@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Reports - Admin - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Report Moderation Queue</h2>
+            <div style="display:flex;gap:8px;">
+                <span class="badge badge-warning" th:text="'Pending: ' + ${pendingCount}">Pending: 0</span>
+                <select id="reportStatusFilter" class="form-control" style="width:auto;" onchange="loadReports()">
+                    <option value="">All</option>
+                    <option value="PENDING" selected>Pending</option>
+                    <option value="REVIEWED">Reviewed</option>
+                    <option value="DISMISSED">Dismissed</option>
+                    <option value="ACTIONED">Actioned</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Reporter</th>
+                    <th>Type</th>
+                    <th>Target ID</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="reportsTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:20px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function loadReports() {
+    var status = document.getElementById('reportStatusFilter').value;
+    var url = '/api/admin/reports?size=50';
+    if (status) url += '&status=' + status;
+
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var tbody = document.getElementById('reportsTableBody');
+            if (!data.content || data.content.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">No reports found</td></tr>';
+                return;
+            }
+            var html = '';
+            data.content.forEach(function(r) {
+                var statusBadge = r.status === 'PENDING' ? 'badge-warning' :
+                                  r.status === 'ACTIONED' ? 'badge-danger' :
+                                  r.status === 'DISMISSED' ? 'badge-info' : 'badge-success';
+                html += '<tr>' +
+                    '<td>' + r.id + '</td>' +
+                    '<td>' + escapeHtml(r.reporterUsername) + '</td>' +
+                    '<td>' + r.targetType + '</td>' +
+                    '<td>' + r.targetId + '</td>' +
+                    '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(r.reason) + '</td>' +
+                    '<td><span class="badge ' + statusBadge + '">' + r.status + '</span></td>' +
+                    '<td>' + (r.createdAt ? r.createdAt.substring(0, 16).replace('T', ' ') : '') + '</td>' +
+                    '<td>' +
+                    (r.status === 'PENDING' ?
+                        '<button class="btn btn-sm btn-primary" onclick="reviewReport(' + r.id + ',\'REVIEWED\')">Review</button> ' +
+                        '<button class="btn btn-sm btn-outline" onclick="reviewReport(' + r.id + ',\'DISMISSED\')">Dismiss</button> ' +
+                        '<button class="btn btn-sm btn-danger" onclick="reviewReport(' + r.id + ',\'ACTIONED\')">Action</button>'
+                        : (r.reviewedByUsername ? 'by ' + escapeHtml(r.reviewedByUsername) : '')) +
+                    '</td></tr>';
+            });
+            tbody.innerHTML = html;
+        })
+        .catch(function() {
+            document.getElementById('reportsTableBody').innerHTML =
+                '<tr><td colspan="8" style="text-align:center;color:var(--danger);">Error loading reports</td></tr>';
+        });
+}
+
+function reviewReport(id, status) {
+    fetch('/api/admin/reports/' + id + '/review', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+    })
+    .then(function() {
+        showToast('Report updated');
+        loadReports();
+    })
+    .catch(function() { showToast('Error updating report', 'error'); });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadReports();
+});
+</script>
+</body>
+</html>

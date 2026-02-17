@@ -21,7 +21,6 @@ public class BookmarkRequestDto {
     @Size(max = 255, message = "Title must be 255 characters or less")
     private String title;
 
-    @NotBlank(message = "URL is required")
     @Size(max = 2048, message = "URL must be 2048 characters or less")
     private String url;
 
@@ -31,4 +30,18 @@ public class BookmarkRequestDto {
     private Set<String> tagNames;
 
     private Long folderId;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    @Size(max = 300, message = "Address must be 300 characters or less")
+    private String address;
+
+    private String caption;
+
+    @Size(max = 10, message = "Map emoji must be 10 characters or less")
+    private String mapEmoji;
+
+    private Boolean privatePost;
 }

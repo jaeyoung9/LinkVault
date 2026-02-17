@@ -1,16 +1,17 @@
 // ===== Toast Notifications =====
-function showToast(message, type = 'success') {
-    let container = document.querySelector('.toast-container');
+function showToast(message, type) {
+    type = type || 'success';
+    var container = document.querySelector('.toast-container');
     if (!container) {
         container = document.createElement('div');
         container.className = 'toast-container';
         document.body.appendChild(container);
     }
-    const toast = document.createElement('div');
+    var toast = document.createElement('div');
     toast.className = 'toast ' + type;
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(function() { toast.remove(); }, 3000);
 }
 
 // ===== Utility =====
@@ -20,27 +21,106 @@ function escapeHtml(str) {
               .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-// ===== Bookmark CRUD =====
+// ===== Post Compose (replaces Bookmark CRUD) =====
+var pendingPhotos = [];
+var existingPhotos = [];
+var deletePhotoIds = [];
+
 function openAddModal() {
     document.getElementById('bookmarkModal').classList.add('active');
-    document.getElementById('modalTitle').textContent = 'Add Bookmark';
+    document.getElementById('modalTitle').textContent = 'Share a Story';
     document.getElementById('bookmarkForm').reset();
     document.getElementById('bookmarkId').value = '';
+    document.getElementById('bmLatitude').value = '';
+    document.getElementById('bmLongitude').value = '';
+    pendingPhotos = [];
+    existingPhotos = [];
+    deletePhotoIds = [];
+    renderPhotoPreview();
+    var bmPrivate = document.getElementById('bmPrivate');
+    if (bmPrivate) bmPrivate.checked = false;
+
+    // Reset emoji picker
+    var emojiInput = document.getElementById('bmMapEmoji');
+    if (emojiInput) emojiInput.value = '';
+    var emojiBtn = document.getElementById('emojiPickerBtn');
+    if (emojiBtn) emojiBtn.innerHTML = '&#128205;';
+    var emojiPanel = document.getElementById('emojiPickerPanel');
+    if (emojiPanel) emojiPanel.style.display = 'none';
+
+    // Reset location search
+    var locSearch = document.getElementById('bmLocationSearch');
+    if (locSearch) locSearch.value = '';
+
+    // Init compose map after modal is visible
+    setTimeout(function() {
+        if (typeof initComposeMap === 'function') {
+            initComposeMap();
+        }
+        // Reset marker
+        if (typeof composeMarker !== 'undefined' && composeMarker) {
+            if (typeof composeMap !== 'undefined' && composeMap) {
+                composeMap.removeLayer(composeMarker);
+            }
+            composeMarker = null;
+        }
+    }, 200);
 }
 
 function openEditModal(id) {
     fetch('/api/bookmarks/' + id)
-        .then(r => r.json())
-        .then(b => {
+        .then(function(r) { return r.json(); })
+        .then(function(b) {
             document.getElementById('bookmarkModal').classList.add('active');
-            document.getElementById('modalTitle').textContent = 'Edit Bookmark';
+            document.getElementById('modalTitle').textContent = 'Edit Post';
             document.getElementById('bookmarkId').value = b.id;
-            document.getElementById('bmTitle').value = b.title;
-            document.getElementById('bmUrl').value = b.url;
+            document.getElementById('bmTitle').value = b.title || '';
+            document.getElementById('bmUrl').value = b.url || '';
             document.getElementById('bmDescription').value = b.description || '';
             document.getElementById('bmTags').value = b.tagNames ? b.tagNames.join(', ') : '';
-            const folderSelect = document.getElementById('bmFolder');
+            document.getElementById('bmCaption').value = b.caption || '';
+            document.getElementById('bmAddress').value = b.address || '';
+            document.getElementById('bmLatitude').value = b.latitude || '';
+            document.getElementById('bmLongitude').value = b.longitude || '';
+            var folderSelect = document.getElementById('bmFolder');
             if (folderSelect) folderSelect.value = b.folderId || '';
+
+            // Load existing photos
+            pendingPhotos = [];
+            deletePhotoIds = [];
+            existingPhotos = b.photos || [];
+            renderPhotoPreview();
+
+            var bmPrivate = document.getElementById('bmPrivate');
+            if (bmPrivate) bmPrivate.checked = !!b.privatePost;
+
+            // Set emoji picker
+            var emojiInput = document.getElementById('bmMapEmoji');
+            if (emojiInput) emojiInput.value = b.mapEmoji || '';
+            var emojiBtn = document.getElementById('emojiPickerBtn');
+            if (emojiBtn) emojiBtn.textContent = b.mapEmoji || '📍';
+            var emojiPanel = document.getElementById('emojiPickerPanel');
+            if (emojiPanel) emojiPanel.style.display = 'none';
+
+            // Reset location search
+            var locSearch = document.getElementById('bmLocationSearch');
+            if (locSearch) locSearch.value = '';
+
+            // Init compose map and set marker
+            setTimeout(function() {
+                if (typeof initComposeMap === 'function') {
+                    initComposeMap();
+                }
+                if (b.latitude && b.longitude && typeof composeMap !== 'undefined' && composeMap) {
+                    var latlng = L.latLng(b.latitude, b.longitude);
+                    composeMap.setView(latlng, 15);
+                    if (typeof composeMarker !== 'undefined' && composeMarker) {
+                        composeMarker.setLatLng(latlng);
+                    } else {
+                        composeMarker = L.marker(latlng).addTo(composeMap);
+                    }
+                }
+            }, 200);
         });
 }
 
@@ -57,52 +137,109 @@ function closeFolderModal() {
     document.getElementById('folderModal').classList.remove('active');
 }
 
-function saveBookmark(event) {
+function savePost(event) {
     event.preventDefault();
-    const id = document.getElementById('bookmarkId').value;
-    const tagsRaw = document.getElementById('bmTags').value;
-    const tagNames = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(t => t) : [];
-    const folderVal = document.getElementById('bmFolder').value;
+    var id = document.getElementById('bookmarkId').value;
+    var tagsRaw = document.getElementById('bmTags').value;
+    var tagNames = tagsRaw ? tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }) : [];
+    var folderVal = document.getElementById('bmFolder').value;
 
-    const data = {
+    var bmPrivateEl = document.getElementById('bmPrivate');
+    var data = {
         title: document.getElementById('bmTitle').value,
-        url: document.getElementById('bmUrl').value,
+        url: document.getElementById('bmUrl').value || null,
         description: document.getElementById('bmDescription').value,
         tagNames: tagNames,
-        folderId: folderVal ? parseInt(folderVal) : null
+        folderId: folderVal ? parseInt(folderVal) : null,
+        latitude: document.getElementById('bmLatitude').value ? parseFloat(document.getElementById('bmLatitude').value) : null,
+        longitude: document.getElementById('bmLongitude').value ? parseFloat(document.getElementById('bmLongitude').value) : null,
+        address: document.getElementById('bmAddress').value || null,
+        caption: document.getElementById('bmCaption').value || null,
+        mapEmoji: document.getElementById('bmMapEmoji').value || null,
+        privatePost: bmPrivateEl ? bmPrivateEl.checked : false
     };
 
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? '/api/bookmarks/' + id : '/api/bookmarks';
+    var formData = new FormData();
+    formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+
+    // Add pending photos
+    pendingPhotos.forEach(function(file) {
+        formData.append('photos', file);
+    });
+
+    // For edit: add deletePhotoIds
+    if (id && deletePhotoIds.length > 0) {
+        formData.append('deletePhotoIds', new Blob([JSON.stringify(deletePhotoIds)], { type: 'application/json' }));
+    }
+
+    // Send photo order from DOM
+    if (id) {
+        var orderContainer = document.getElementById('photoPreviewContainer');
+        if (orderContainer) {
+            var photoOrder = [];
+            Array.from(orderContainer.children).forEach(function(item) {
+                if (item.dataset.type === 'existing') {
+                    photoOrder.push(parseInt(item.dataset.photoId));
+                }
+            });
+            if (photoOrder.length > 0) {
+                formData.append('photoOrder', new Blob([JSON.stringify(photoOrder)], { type: 'application/json' }));
+            }
+        }
+    }
+
+    var method = id ? 'PUT' : 'POST';
+    var url = id ? '/api/bookmarks/' + id : '/api/bookmarks';
 
     fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: formData
     })
-    .then(r => {
-        if (!r.ok) return r.json().then(e => { throw e; });
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw e; });
         return r.json();
     })
-    .then(() => {
+    .then(function() {
         closeModal();
-        showToast(id ? 'Bookmark updated' : 'Bookmark created');
-        setTimeout(() => location.reload(), 500);
+        showToast(id ? 'Post updated' : 'Post shared!');
+        setTimeout(function() { location.reload(); }, 500);
     })
-    .catch(err => {
-        const msg = err.message || err.fieldErrors ? Object.values(err.fieldErrors).join(', ') : 'Error saving bookmark';
+    .catch(function(err) {
+        var msg = err.message || 'Error saving post';
+        if (err.fieldErrors) msg = Object.values(err.fieldErrors).join(', ');
         showToast(msg, 'error');
     });
 }
 
+function openAddModalPrivate() {
+    openAddModal();
+    setTimeout(function() {
+        var bmPrivate = document.getElementById('bmPrivate');
+        if (bmPrivate) bmPrivate.checked = true;
+    }, 50);
+}
+
+function switchSavedTab(tabName, btn) {
+    document.getElementById('savedTab').style.display = tabName === 'saved' ? '' : 'none';
+    document.getElementById('privateTab').style.display = tabName === 'private' ? '' : 'none';
+    var tabs = document.querySelectorAll('.settings-tab');
+    tabs.forEach(function(t) { t.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+}
+
+// Legacy function for backward compatibility
+function saveBookmark(event) {
+    savePost(event);
+}
+
 function deleteBookmark(id) {
-    if (!confirm('Delete this bookmark?')) return;
+    if (!confirm('Delete this post?')) return;
     fetch('/api/bookmarks/' + id, { method: 'DELETE' })
-        .then(() => {
-            showToast('Bookmark deleted');
-            setTimeout(() => location.reload(), 500);
+        .then(function() {
+            showToast('Post deleted');
+            setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(() => showToast('Error deleting bookmark', 'error'));
+        .catch(function() { showToast('Error deleting post', 'error'); });
 }
 
 function recordAccess(id, url) {
@@ -110,10 +247,260 @@ function recordAccess(id, url) {
     window.open(url, '_blank');
 }
 
+// ===== Photo Upload =====
+function handlePhotoSelect(files) {
+    for (var i = 0; i < files.length; i++) {
+        if (pendingPhotos.length + existingPhotos.length >= 4) {
+            showToast('Maximum 4 photos allowed', 'error');
+            break;
+        }
+        if (files[i].type.startsWith('image/')) {
+            pendingPhotos.push(files[i]);
+        }
+    }
+    renderPhotoPreview();
+}
+
+function renderPhotoPreview() {
+    var container = document.getElementById('photoPreviewContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    var orderNum = 1;
+
+    // Existing photos (from edit)
+    existingPhotos.forEach(function(photo) {
+        var div = document.createElement('div');
+        div.className = 'photo-preview-item';
+        div.draggable = true;
+        div.dataset.type = 'existing';
+        div.dataset.photoId = photo.id;
+        div.innerHTML = '<img src="' + photo.url + '" alt=""/>' +
+            '<button type="button" class="photo-preview-remove" onclick="removeExistingPhoto(' + photo.id + ')">&times;</button>' +
+            '<span class="photo-order-badge">' + orderNum + '</span>';
+        orderNum++;
+        initPhotoDrag(div);
+        container.appendChild(div);
+    });
+
+    // Pending photos (newly selected)
+    pendingPhotos.forEach(function(file, idx) {
+        var div = document.createElement('div');
+        div.className = 'photo-preview-item';
+        div.draggable = true;
+        div.dataset.type = 'pending';
+        div.dataset.pendingIdx = idx;
+        var img = document.createElement('img');
+        img.alt = '';
+        var reader = new FileReader();
+        reader.onload = function(e) { img.src = e.target.result; };
+        reader.readAsDataURL(file);
+        div.appendChild(img);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'photo-preview-remove';
+        btn.innerHTML = '&times;';
+        btn.dataset.idx = idx;
+        btn.onclick = function() { removePendingPhoto(parseInt(this.dataset.idx)); };
+        div.appendChild(btn);
+        var badge = document.createElement('span');
+        badge.className = 'photo-order-badge';
+        badge.textContent = orderNum;
+        orderNum++;
+        div.appendChild(badge);
+        initPhotoDrag(div);
+        container.appendChild(div);
+    });
+}
+
+function initPhotoDrag(el) {
+    el.addEventListener('dragstart', function(e) {
+        el.classList.add('photo-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+        e.stopPropagation();
+    });
+    el.addEventListener('dragend', function() {
+        el.classList.remove('photo-dragging');
+        document.querySelectorAll('.photo-drag-over').forEach(function(d) { d.classList.remove('photo-drag-over'); });
+    });
+    el.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var dragging = document.querySelector('.photo-dragging');
+        if (dragging && dragging !== el) {
+            el.classList.add('photo-drag-over');
+        }
+    });
+    el.addEventListener('dragleave', function() {
+        el.classList.remove('photo-drag-over');
+    });
+    el.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        el.classList.remove('photo-drag-over');
+        var dragging = document.querySelector('.photo-dragging');
+        if (dragging && dragging !== el) {
+            var container = el.parentNode;
+            var items = Array.from(container.children);
+            var fromIdx = items.indexOf(dragging);
+            var toIdx = items.indexOf(el);
+            if (fromIdx < toIdx) {
+                container.insertBefore(dragging, el.nextSibling);
+            } else {
+                container.insertBefore(dragging, el);
+            }
+            syncPhotoOrderFromDom();
+        }
+    });
+}
+
+function syncPhotoOrderFromDom() {
+    var container = document.getElementById('photoPreviewContainer');
+    if (!container) return;
+    var items = Array.from(container.children);
+    var newExisting = [];
+    var newPending = [];
+
+    items.forEach(function(item, idx) {
+        var badge = item.querySelector('.photo-order-badge');
+        if (badge) badge.textContent = idx + 1;
+
+        if (item.dataset.type === 'existing') {
+            var photoId = parseInt(item.dataset.photoId);
+            var found = existingPhotos.find(function(p) { return p.id === photoId; });
+            if (found) newExisting.push(found);
+        } else if (item.dataset.type === 'pending') {
+            var pendingIdx = parseInt(item.dataset.pendingIdx);
+            if (pendingPhotos[pendingIdx]) newPending.push(pendingPhotos[pendingIdx]);
+        }
+    });
+
+    existingPhotos = newExisting;
+    pendingPhotos = newPending;
+
+    // Update pending indices
+    items.forEach(function(item, idx) {
+        if (item.dataset.type === 'pending') {
+            var file = newPending.indexOf(pendingPhotos.find(function(f) {
+                return f === newPending[Array.from(container.querySelectorAll('[data-type="pending"]')).indexOf(item)];
+            }));
+        }
+    });
+}
+
+function removePendingPhoto(idx) {
+    pendingPhotos.splice(idx, 1);
+    renderPhotoPreview();
+}
+
+function removeExistingPhoto(photoId) {
+    deletePhotoIds.push(photoId);
+    existingPhotos = existingPhotos.filter(function(p) { return p.id !== photoId; });
+    renderPhotoPreview();
+}
+
+// Photo drop zone
+function initPhotoDropZone() {
+    var zone = document.getElementById('photoDropZone');
+    if (!zone) return;
+
+    zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        zone.classList.add('drag-active');
+    });
+    zone.addEventListener('dragleave', function() {
+        zone.classList.remove('drag-active');
+    });
+    zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        zone.classList.remove('drag-active');
+        handlePhotoSelect(e.dataTransfer.files);
+    });
+}
+
+// ===== Emoji Picker =====
+var EMOJI_LIST = ['📍','🏠','🏢','🏫','🏪','🏨','🏩','⛪','🕌','🕍','⛲','⛵','🏖️','🏔️','🏞️','🌊','🌳','🌸','🌻','🌿','🍔','🍕','☕','🍰','🍽️','🎨','🎵','📷','✈️','🚂','🚗','🚲','🎯','⭐','❤️','💡','🔥','🌟','🌈','🎉'];
+var emojiPanelPopulated = false;
+
+function toggleEmojiPicker() {
+    var panel = document.getElementById('emojiPickerPanel');
+    if (!panel) return;
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        if (!emojiPanelPopulated) {
+            var html = '';
+            EMOJI_LIST.forEach(function(emoji) {
+                html += '<button type="button" class="emoji-picker-item" onclick="selectEmoji(\'' + emoji + '\')">' + emoji + '</button>';
+            });
+            panel.innerHTML = html;
+            emojiPanelPopulated = true;
+        }
+        panel.style.display = 'flex';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function selectEmoji(emoji) {
+    var input = document.getElementById('bmMapEmoji');
+    if (input) input.value = emoji;
+    var btn = document.getElementById('emojiPickerBtn');
+    if (btn) btn.textContent = emoji;
+
+    if (typeof composeMarker !== 'undefined' && composeMarker && composeMap) {
+        var newIcon = createEmojiIcon(emoji);
+        composeMarker.setIcon(newIcon);
+    }
+
+    var panel = document.getElementById('emojiPickerPanel');
+    if (panel) panel.style.display = 'none';
+}
+
+function clearEmojiSelection() {
+    var input = document.getElementById('bmMapEmoji');
+    if (input) input.value = '';
+    var btn = document.getElementById('emojiPickerBtn');
+    if (btn) btn.innerHTML = '&#128205;';
+
+    if (typeof composeMarker !== 'undefined' && composeMarker) {
+        composeMarker.setIcon(createEmojiIcon('📍'));
+    }
+
+    var panel = document.getElementById('emojiPickerPanel');
+    if (panel) panel.style.display = 'none';
+}
+
+// ===== Report Content =====
+function reportContent(targetType, targetId) {
+    var reason = prompt('Please describe why you are reporting this content:');
+    if (!reason || !reason.trim()) return;
+
+    fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            targetType: targetType,
+            targetId: targetId,
+            reason: reason.trim()
+        })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw e; });
+        return r.json();
+    })
+    .then(function() {
+        showToast('Report submitted. Thank you.');
+    })
+    .catch(function(err) {
+        var msg = err.message || 'Error submitting report';
+        showToast(msg, 'error');
+    });
+}
+
 // ===== Folder CRUD =====
 function saveFolder(event) {
     event.preventDefault();
-    const data = {
+    var data = {
         name: document.getElementById('folderName').value,
         parentId: document.getElementById('folderParent').value || null
     };
@@ -123,75 +510,72 @@ function saveFolder(event) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(r => {
-        if (!r.ok) return r.json().then(e => { throw e; });
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw e; });
         return r.json();
     })
-    .then(() => {
+    .then(function() {
         closeFolderModal();
         showToast('Folder created');
-        setTimeout(() => location.reload(), 500);
+        setTimeout(function() { location.reload(); }, 500);
     })
-    .catch(err => showToast(err.message || 'Error creating folder', 'error'));
+    .catch(function(err) { showToast(err.message || 'Error creating folder', 'error'); });
 }
 
 function deleteFolder(id) {
     if (!confirm('Delete this folder and all its contents?')) return;
     fetch('/api/folders/' + id, { method: 'DELETE' })
-        .then(() => {
+        .then(function() {
             showToast('Folder deleted');
-            setTimeout(() => location.reload(), 500);
+            setTimeout(function() { location.reload(); }, 500);
         })
-        .catch(() => showToast('Error deleting folder', 'error'));
+        .catch(function() { showToast('Error deleting folder', 'error'); });
 }
 
 // ===== Drag & Drop =====
-let draggedBookmarkId = null;
+var draggedBookmarkId = null;
 
 function initDragDrop() {
-    // Bookmark cards are draggable
-    document.querySelectorAll('.bookmark-card[draggable]').forEach(card => {
-        card.addEventListener('dragstart', e => {
+    document.querySelectorAll('.bookmark-card[draggable]').forEach(function(card) {
+        card.addEventListener('dragstart', function(e) {
             draggedBookmarkId = card.dataset.id;
             card.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
         });
-        card.addEventListener('dragend', () => {
+        card.addEventListener('dragend', function() {
             card.classList.remove('dragging');
             draggedBookmarkId = null;
-            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            document.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
         });
     });
 
-    // Folder items in sidebar are drop targets
-    document.querySelectorAll('.folder-item').forEach(item => {
-        item.addEventListener('dragover', e => {
+    document.querySelectorAll('.folder-item').forEach(function(item) {
+        item.addEventListener('dragover', function(e) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             item.classList.add('drag-over');
         });
-        item.addEventListener('dragleave', () => {
+        item.addEventListener('dragleave', function() {
             item.classList.remove('drag-over');
         });
-        item.addEventListener('drop', e => {
+        item.addEventListener('drop', function(e) {
             e.preventDefault();
             item.classList.remove('drag-over');
             if (draggedBookmarkId) {
-                const folderId = item.dataset.folderId;
+                var folderId = item.dataset.folderId;
                 moveBookmarkToFolder(draggedBookmarkId, folderId);
             }
         });
     });
 
-    // Uncategorized drop zone
-    const uncatZone = document.getElementById('uncategorizedDrop');
+    var uncatZone = document.getElementById('uncategorizedDrop');
     if (uncatZone) {
-        uncatZone.addEventListener('dragover', e => {
+        uncatZone.addEventListener('dragover', function(e) {
             e.preventDefault();
             uncatZone.classList.add('drag-over');
         });
-        uncatZone.addEventListener('dragleave', () => uncatZone.classList.remove('drag-over'));
-        uncatZone.addEventListener('drop', e => {
+        uncatZone.addEventListener('dragleave', function() { uncatZone.classList.remove('drag-over'); });
+        uncatZone.addEventListener('drop', function(e) {
             e.preventDefault();
             uncatZone.classList.remove('drag-over');
             if (draggedBookmarkId) moveBookmarkToFolder(draggedBookmarkId, null);
@@ -205,21 +589,21 @@ function moveBookmarkToFolder(bookmarkId, folderId) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folderId: folderId ? parseInt(folderId) : null })
     })
-    .then(r => {
+    .then(function(r) {
         if (!r.ok) throw new Error();
-        showToast('Bookmark moved');
-        setTimeout(() => location.reload(), 500);
+        showToast('Post moved');
+        setTimeout(function() { location.reload(); }, 500);
     })
-    .catch(() => showToast('Error moving bookmark', 'error'));
+    .catch(function() { showToast('Error moving post', 'error'); });
 }
 
 // ===== URL Duplicate Check =====
 function checkDuplicateUrl() {
-    const urlInput = document.getElementById('bmUrl');
+    var urlInput = document.getElementById('bmUrl');
     if (!urlInput || !urlInput.value) return;
     fetch('/api/bookmarks/check-url?url=' + encodeURIComponent(urlInput.value))
-        .then(r => r.json())
-        .then(data => {
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
             if (data.exists && !document.getElementById('bookmarkId').value) {
                 urlInput.style.borderColor = '#ef4444';
                 showToast('This URL already exists!', 'error');
@@ -231,21 +615,21 @@ function checkDuplicateUrl() {
 
 // ===== Import =====
 function importFile(format) {
-    const input = document.getElementById(format + 'File');
+    var input = document.getElementById(format + 'File');
     if (!input.files.length) {
         showToast('Please select a file', 'error');
         return;
     }
-    const formData = new FormData();
+    var formData = new FormData();
     formData.append('file', input.files[0]);
 
     fetch('/api/data/import/' + format, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
             showToast(data.message);
-            setTimeout(() => window.location.href = '/', 1500);
+            setTimeout(function() { window.location.href = '/'; }, 1500);
         })
-        .catch(() => showToast('Import failed', 'error'));
+        .catch(function() { showToast('Import failed', 'error'); });
 }
 
 // ===== Feature 1: Sidebar Collapse =====
@@ -312,7 +696,7 @@ function onGlobalSearchInput() {
 function renderSearchResults(data) {
     var html = '';
     if (data.bookmarks && data.bookmarks.length > 0) {
-        html += '<div class="search-result-group"><div class="search-result-group-title">Bookmarks</div>';
+        html += '<div class="search-result-group"><div class="search-result-group-title">Posts</div>';
         data.bookmarks.forEach(function(b) {
             html += '<a href="/bookmark/' + b.id + '" class="search-result-item">' +
                 '<span class="search-result-icon">&#128279;</span>' +
@@ -353,15 +737,13 @@ function toggleSaveBookmark(id) {
             btns.forEach(function(btn) {
                 if (data.saved) {
                     btn.classList.add('save-active');
-                    btn.innerHTML = '&#128278;';
                 } else {
                     btn.classList.remove('save-active');
-                    btn.innerHTML = '&#128278;';
                 }
             });
-            showToast(data.saved ? 'Bookmark saved' : 'Bookmark unsaved');
+            showToast(data.saved ? 'Post saved' : 'Post unsaved');
         })
-        .catch(function() { showToast('Error saving bookmark', 'error'); });
+        .catch(function() { showToast('Error saving post', 'error'); });
 }
 
 // ===== Feature 4: Favorites =====
@@ -380,7 +762,6 @@ function toggleFavoriteBookmark(id) {
                 }
             });
             showToast(data.favorited ? 'Added to favorites' : 'Removed from favorites');
-            // Reload after a short delay to update sidebar favorites
             setTimeout(function() { location.reload(); }, 800);
         })
         .catch(function() { showToast('Error updating favorite', 'error'); });
@@ -449,13 +830,11 @@ function toggleNotificationPanel() {
     var panel = document.getElementById('notificationPanel');
     if (!panel) return;
     if (panel.style.display === 'none' || panel.style.display === '') {
-        // Position the panel near the bell button
         var bellBtn = document.querySelector('.notification-bell-btn');
         if (bellBtn) {
             var rect = bellBtn.getBoundingClientRect();
             panel.style.top = (rect.bottom + 8) + 'px';
             panel.style.left = rect.left + 'px';
-            // Ensure panel doesn't go off-screen to the right
             var panelWidth = 280;
             if (rect.left + panelWidth > window.innerWidth) {
                 panel.style.left = (window.innerWidth - panelWidth - 12) + 'px';
@@ -498,7 +877,6 @@ function markAllNotificationsRead() {
     fetch('/api/notifications/read-all', { method: 'PUT' })
         .then(function() {
             loadNotifications();
-            // Update badge
             var badge = document.querySelector('.notification-badge');
             if (badge) badge.remove();
             showToast('All notifications marked as read');
@@ -632,8 +1010,6 @@ function applyTheme(theme) {
 }
 
 function initTheme() {
-    // Server-injected script in sidebar fragment already applies the theme.
-    // This is a fallback in case localStorage has a value not yet synced.
     var saved = localStorage.getItem('theme');
     if (saved === 'LIGHT') {
         document.body.classList.add('light-theme');
@@ -647,9 +1023,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initDragDrop();
     initEventDelegation();
     initFavoritesDragDrop();
+    initPhotoDropZone();
     var urlInput = document.getElementById('bmUrl');
     if (urlInput) urlInput.addEventListener('blur', checkDuplicateUrl);
-    // Poll for unread notifications every 60 seconds
     pollUnreadCount();
     setInterval(pollUnreadCount, 60000);
 });

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.SystemStatsDto;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.service.*;
+import org.link.linkvault.service.ReportService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,6 +30,7 @@ public class AdminWebController {
     private final QnaArticleService qnaArticleService;
     private final AnnouncementService announcementService;
     private final PrivacyPolicyService privacyPolicyService;
+    private final ReportService reportService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_STATS')")
@@ -58,8 +60,7 @@ public class AdminWebController {
                     PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"))));
             model.addAttribute("showDeleted", true);
         } else {
-            User currentUser = userService.getUserEntity(userDetails.getUsername());
-            model.addAttribute("bookmarks", bookmarkService.findAll(currentUser,
+            model.addAttribute("bookmarks", bookmarkService.findAllForAdmin(
                     PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
             model.addAttribute("showDeleted", false);
         }
@@ -114,6 +115,13 @@ public class AdminWebController {
         return "admin/permissions";
     }
 
+    @GetMapping("/reports")
+    @PreAuthorize("hasAuthority('REPORT_REVIEW')")
+    public String reports(Model model) {
+        model.addAttribute("pendingCount", reportService.getPendingCount());
+        return "admin/reports";
+    }
+
     @GetMapping("/qna")
     @PreAuthorize("hasAuthority('MANAGE_QNA')")
     public String qnaManagement(
@@ -140,5 +148,11 @@ public class AdminWebController {
         model.addAttribute("activePolicy", privacyPolicyService.getActivePolicy());
         model.addAttribute("history", privacyPolicyService.findAll());
         return "admin/privacy-policy";
+    }
+
+    @GetMapping("/settings")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public String settings() {
+        return "admin/settings";
     }
 }

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="${pageTitle} + ' - LinkVault'">LinkVault</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 </head>
 <body>
 <div class="app-layout">
@@ -14,28 +15,57 @@
     <div class="main-content">
         <div class="header-bar">
             <div>
-                <h2 th:text="${pageTitle}">Saved Bookmarks</h2>
-                <span style="font-size:0.82rem; color: var(--text-muted);"
-                      th:text="${bookmarkList.size()} + ' saved'">0 saved</span>
+                <h2 th:text="${pageTitle}">Saved &amp; Private</h2>
             </div>
-            <button class="btn btn-primary" onclick="openAddModal()">+ Add</button>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Share a Story</button>
         </div>
 
-        <div class="bookmark-grid" th:if="${!bookmarkList.isEmpty()}">
-            <th:block th:each="bookmark : ${bookmarkList}">
-                <div th:replace="~{fragments/layout :: bookmarkCard(${bookmark})}"></div>
-            </th:block>
+        <!-- Tabs -->
+        <div class="settings-tabs" style="margin-bottom: 20px;">
+            <button class="settings-tab active" onclick="switchSavedTab('saved', this)">
+                Saved Posts <span style="font-size:0.75rem;color:var(--text-muted);" th:text="'(' + ${savedList.size()} + ')'"></span>
+            </button>
+            <button class="settings-tab" onclick="switchSavedTab('private', this)">
+                My Private Posts <span style="font-size:0.75rem;color:var(--text-muted);" th:text="'(' + ${privateList.size()} + ')'"></span>
+            </button>
         </div>
-        <div class="empty-state" th:if="${bookmarkList.isEmpty()}">
-            <h3>No saved bookmarks</h3>
-            <p>Click the bookmark icon on any card to save it for later.</p>
+
+        <!-- Saved Posts Tab -->
+        <div id="savedTab" class="saved-tab-content">
+            <div class="post-grid" th:if="${!savedList.isEmpty()}">
+                <th:block th:each="bookmark : ${savedList}">
+                    <div th:replace="~{fragments/layout :: postCard(${bookmark})}"></div>
+                </th:block>
+            </div>
+            <div class="empty-state" th:if="${savedList.isEmpty()}">
+                <h3>No saved bookmarks</h3>
+                <p>Click the bookmark icon on any card to save it for later.</p>
+            </div>
+        </div>
+
+        <!-- Private Posts Tab -->
+        <div id="privateTab" class="saved-tab-content" style="display:none;">
+            <div style="margin-bottom: 16px;">
+                <button class="btn btn-primary" onclick="openAddModalPrivate()">+ New Private Post</button>
+            </div>
+            <div class="post-grid" th:if="${!privateList.isEmpty()}">
+                <th:block th:each="bookmark : ${privateList}">
+                    <div th:replace="~{fragments/layout :: postCard(${bookmark})}"></div>
+                </th:block>
+            </div>
+            <div class="empty-state" th:if="${privateList.isEmpty()}">
+                <h3>No private posts</h3>
+                <p>Create a private post to keep it visible only to you.</p>
+            </div>
         </div>
     </div>
 </div>
 
-<div th:replace="~{fragments/layout :: bookmarkModal}"></div>
+<div th:replace="~{fragments/layout :: postComposeModal}"></div>
 <div th:replace="~{fragments/layout :: folderModal}"></div>
 <div th:replace="~{fragments/layout :: searchModal}"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:src="@{/js/map.js}"></script>
 <script th:src="@{/js/app.js}"></script>
 </body>
 </html>

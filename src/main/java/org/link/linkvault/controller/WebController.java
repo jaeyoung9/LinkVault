@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import org.link.linkvault.entity.Role;
+import org.link.linkvault.exception.ResourceNotFoundException;
+
 import java.util.List;
 
 @Controller
@@ -77,7 +80,7 @@ public class WebController {
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmarks", bookmarks);
-        model.addAttribute("pageTitle", "All Bookmarks");
+        model.addAttribute("pageTitle", "Feed");
         model.addAttribute("frequent", bookmarkService.findFrequentlyAccessed(currentUser, 5));
         return "index";
     }
@@ -132,6 +135,15 @@ public class WebController {
             @PathVariable Long id, Model model) {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         BookmarkResponseDto bookmark = bookmarkService.findById(id);
+
+        // Private post access control (admins can always view)
+        boolean isAdmin = currentUser.getRole() == Role.SUPER_ADMIN
+                || currentUser.getRole() == Role.COMMUNITY_ADMIN
+                || currentUser.getRole() == Role.MODERATOR;
+        if (bookmark.isPrivatePost() && !isAdmin && !currentUser.getUsername().equals(bookmark.getOwnerUsername())) {
+            throw new ResourceNotFoundException("Bookmark not found with id: " + id);
+        }
+
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmark", bookmark);
         model.addAttribute("pageTitle", bookmark.getTitle());
@@ -140,14 +152,25 @@ public class WebController {
         return "bookmark";
     }
 
+    @GetMapping("/map")
+    public String mapDiscovery(
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model) {
+        User currentUser = userService.getUserEntity(userDetails.getUsername());
+        populateCommonModel(model, currentUser);
+        model.addAttribute("pageTitle", "Map Discover");
+        return "map";
+    }
+
     @GetMapping("/saved")
     public String savedPage(
             @AuthenticationPrincipal UserDetails userDetails,
             Model model) {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         populateCommonModel(model, currentUser);
-        model.addAttribute("bookmarkList", savedBookmarkService.getSavedBookmarks(currentUser));
-        model.addAttribute("pageTitle", "Saved Bookmarks");
+        model.addAttribute("savedList", savedBookmarkService.getSavedBookmarks(currentUser));
+        model.addAttribute("privateList", bookmarkService.findPrivateByUser(currentUser));
+        model.addAttribute("pageTitle", "Saved & Private");
         return "saved";
     }
 
@@ -230,5 +253,9 @@ public class WebController {
         model.addAttribute("folders", folderService.findRootFolders(currentUser));
         model.addAttribute("tags", tagService.findAll());
         model.addAttribute("currentUser", currentUser.getUsername());
+        boolean isAdmin = currentUser.getRole() == Role.SUPER_ADMIN
+                || currentUser.getRole() == Role.COMMUNITY_ADMIN
+                || currentUser.getRole() == Role.MODERATOR;
+        model.addAttribute("isAdmin", isAdmin);
     }
 }

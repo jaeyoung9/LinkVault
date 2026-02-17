@@ -15,7 +15,7 @@
         <div class="sidebar-header-top">
             <div class="sidebar-brand">
                 <h1>LinkVault</h1>
-                <p class="sidebar-brand-sub">Bookmark Manager</p>
+                <p class="sidebar-brand-sub">Share Places &amp; Stories</p>
             </div>
             <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
         </div>
@@ -144,7 +144,36 @@
     </div>
 </div>
 
-<!-- Bookmark Card Fragment -->
+<!-- Post Card Fragment (photo-first) -->
+<div th:fragment="postCard(bookmark)" class="post-card" th:data-id="${bookmark.id}">
+    <div class="post-card-img post-card-img-placeholder" th:if="${bookmark.leadPhotoUrl != null}">
+        <img th:src="${bookmark.leadPhotoUrl}" alt="" loading="lazy"/>
+    </div>
+    <div class="post-card-img post-card-img-placeholder" th:if="${bookmark.leadPhotoUrl == null}">
+        <span>&#128247;</span>
+    </div>
+    <div class="post-card-body">
+        <a th:href="@{'/bookmark/' + ${bookmark.id}}" class="post-card-title" th:text="${bookmark.title}">Title</a>
+        <span th:if="${bookmark.privatePost}" class="badge badge-info" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:var(--accent);color:#fff;">Private</span>
+        <div class="post-card-location" th:if="${bookmark.address != null and !bookmark.address.isEmpty()}">
+            <span>&#128205;</span> <span th:text="${bookmark.address}">Location</span>
+        </div>
+        <div class="post-card-caption" th:if="${bookmark.caption != null and !bookmark.caption.isEmpty()}"
+             th:text="${bookmark.caption}">Caption snippet</div>
+        <div class="post-card-meta">
+            <span th:if="${bookmark.ownerUsername != null}" th:text="'by ' + ${bookmark.ownerUsername}"></span>
+            <a th:href="@{'/bookmark/' + ${bookmark.id}}"
+               style="color: var(--text-muted); text-decoration: none;"
+               th:text="${bookmark.commentCount != null and bookmark.commentCount > 0} ? ${bookmark.commentCount} + ' comments' : 'Comment'">Comment</a>
+            <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
+        </div>
+        <div class="post-card-tags" th:if="${bookmark.tagNames != null and !bookmark.tagNames.isEmpty()}">
+            <a th:each="tag : ${bookmark.tagNames}" th:href="@{'/tag/' + ${tag}}" class="tag-badge" th:text="${tag}">tag</a>
+        </div>
+    </div>
+</div>
+
+<!-- Bookmark Card Fragment (legacy, still used in some views) -->
 <div th:fragment="bookmarkCard(bookmark)" class="bookmark-card" draggable="true"
      th:data-id="${bookmark.id}" th:data-url="${bookmark.url}">
     <div class="bookmark-header">
@@ -171,7 +200,7 @@
             <button class="btn btn-sm btn-danger js-delete-btn" th:data-id="${bookmark.id}">Del</button>
         </div>
     </div>
-    <div class="bookmark-url" th:text="${bookmark.url}">https://example.com</div>
+    <div class="bookmark-url" th:if="${bookmark.url != null}" th:text="${bookmark.url}">https://example.com</div>
     <div class="bookmark-desc" th:if="${bookmark.description != null and !bookmark.description.isEmpty()}"
          th:text="${bookmark.description}">Description</div>
     <div class="bookmark-meta">
@@ -201,27 +230,70 @@
        th:href="@{''(page=${page.number + 1})}">&raquo;</a>
 </div>
 
-<!-- Bookmark Modal Fragment -->
-<div th:fragment="bookmarkModal" id="bookmarkModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
-    <div class="modal">
-        <h3 id="modalTitle">Add Bookmark</h3>
-        <form id="bookmarkForm" onsubmit="saveBookmark(event)">
+<!-- Post Compose Modal -->
+<div th:fragment="postComposeModal" id="bookmarkModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal post-compose-modal">
+        <h3 id="modalTitle">Share a Story</h3>
+        <form id="bookmarkForm" onsubmit="savePost(event)">
             <input type="hidden" id="bookmarkId"/>
-            <div class="form-group">
-                <label for="bmUrl">URL *</label>
-                <input type="url" id="bmUrl" class="form-control" placeholder="https://..." required/>
-            </div>
+
             <div class="form-group">
                 <label for="bmTitle">Title *</label>
-                <input type="text" id="bmTitle" class="form-control" placeholder="Bookmark title" required/>
+                <input type="text" id="bmTitle" class="form-control" placeholder="Give your story a title" required/>
             </div>
+
+            <!-- Location Section -->
+            <div class="form-group">
+                <label>Location <span style="font-size:0.75rem;color:var(--text-muted);">(click map to place marker)</span></label>
+                <div id="composeMap" class="compose-map"></div>
+                <input type="hidden" id="bmLatitude"/>
+                <input type="hidden" id="bmLongitude"/>
+                <input type="hidden" id="bmAddress" class="form-control" placeholder="Address or place name" style="margin-top:6px;"/>
+                <input type="text" id="bmLocationSearch" class="form-control"
+                       placeholder="Search address..." style="margin-top:6px;"/>
+                <div id="composeSearchResults" class="compose-search-results" style="display:none;"></div>
+            </div>
+
+            <!-- Emoji Marker -->
+            <div class="form-group">
+                <label>Map Marker Emoji</label>
+                <input type="hidden" id="bmMapEmoji"/>
+                <div class="emoji-picker-row">
+                    <button type="button" class="btn btn-outline emoji-picker-selected" id="emojiPickerBtn" onclick="toggleEmojiPicker()">&#128205;</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="clearEmojiSelection()">Clear</button>
+                </div>
+                <div id="emojiPickerPanel" class="emoji-picker-panel" style="display:none;"></div>
+            </div>
+
+            <!-- Photo Section -->
+            <div class="form-group">
+                <label>Photos <span style="font-size:0.75rem;color:var(--text-muted);">(max 4)</span></label>
+                <div id="photoDropZone" class="photo-drop-zone" onclick="document.getElementById('photoFileInput').click()">
+                    <p>Drop photos here or click to browse</p>
+                    <input type="file" id="photoFileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotoSelect(this.files)"/>
+                </div>
+                <div id="photoPreviewContainer" class="photo-preview-container"></div>
+            </div>
+
+            <!-- Caption -->
+            <div class="form-group">
+                <label for="bmCaption">Caption / Story</label>
+                <textarea id="bmCaption" class="form-control" placeholder="Share your experience..." rows="3"></textarea>
+            </div>
+
+            <!-- URL (optional) -->
+            <div class="form-group">
+                <label for="bmUrl">Link <span style="font-size:0.75rem;color:var(--text-muted);">(optional)</span></label>
+                <input type="url" id="bmUrl" class="form-control" placeholder="https://..."/>
+            </div>
+
             <div class="form-group">
                 <label for="bmDescription">Description</label>
                 <textarea id="bmDescription" class="form-control" placeholder="Optional description"></textarea>
             </div>
             <div class="form-group">
                 <label for="bmTags">Tags (comma separated)</label>
-                <input type="text" id="bmTags" class="form-control" placeholder="java, spring, tutorial"/>
+                <input type="text" id="bmTags" class="form-control" placeholder="travel, food, nature"/>
             </div>
             <div class="form-group">
                 <label for="bmFolder">Folder</label>
@@ -230,9 +302,13 @@
                     <option th:each="f : ${folders}" th:value="${f.id}" th:text="${f.name}">Folder</option>
                 </select>
             </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" id="bmPrivate" style="width:auto;"/>
+                <label for="bmPrivate" style="margin:0;font-size:0.85rem;color:var(--text-secondary);">Private (only visible to me)</label>
+            </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="submit" class="btn btn-primary">Share</button>
             </div>
         </form>
     </div>
@@ -267,7 +343,7 @@
     <div class="search-modal">
         <div class="search-modal-input-row">
             <span style="font-size: 1.2rem;">&#128269;</span>
-            <input type="text" id="globalSearchInput" class="form-control" placeholder="Search bookmarks, tags, folders..."
+            <input type="text" id="globalSearchInput" class="form-control" placeholder="Search posts, tags, folders..."
                    oninput="onGlobalSearchInput()" autocomplete="off"/>
             <kbd class="search-kbd">ESC</kbd>
         </div>

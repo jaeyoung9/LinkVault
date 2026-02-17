@@ -38,7 +38,8 @@
             <tr th:each="bookmark : ${bookmarks.content}">
                 <td th:text="${bookmark.id}">1</td>
                 <td>
-                    <a th:href="${bookmark.url}" target="_blank" th:text="${#strings.abbreviate(bookmark.title, 40)}">Title</a>
+                    <a th:href="@{'/bookmark/' + ${bookmark.id}}" th:text="${#strings.abbreviate(bookmark.title, 40)}">Title</a>
+                    <span th:if="${bookmark.privatePost}" style="font-size:0.65rem;padding:1px 5px;border-radius:3px;background:var(--accent);color:#fff;margin-left:4px;">Private</span>
                 </td>
                 <td th:text="${#strings.abbreviate(bookmark.url, 40)}">https://...</td>
                 <td th:text="${bookmark.ownerUsername}">admin</td>

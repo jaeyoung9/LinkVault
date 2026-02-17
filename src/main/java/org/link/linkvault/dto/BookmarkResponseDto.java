@@ -5,6 +5,8 @@ import lombok.Getter;
 import org.link.linkvault.entity.Bookmark;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,7 +30,25 @@ public class BookmarkResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // New fields
+    private Double latitude;
+    private Double longitude;
+    private String address;
+    private String caption;
+    private String mapEmoji;
+    private boolean privatePost;
+    private List<PhotoResponseDto> photos;
+    private String leadPhotoUrl;
+
     public static BookmarkResponseDto from(Bookmark bookmark) {
+        List<PhotoResponseDto> photoDtos = (bookmark.getPhotos() != null && !bookmark.getPhotos().isEmpty())
+                ? bookmark.getPhotos().stream()
+                    .map(PhotoResponseDto::from)
+                    .collect(Collectors.toList())
+                : Collections.emptyList();
+
+        String leadPhoto = photoDtos.isEmpty() ? null : photoDtos.get(0).getUrl();
+
         return BookmarkResponseDto.builder()
                 .id(bookmark.getId())
                 .title(bookmark.getTitle())
@@ -47,6 +67,14 @@ public class BookmarkResponseDto {
                 .lastAccessedAt(bookmark.getLastAccessedAt())
                 .createdAt(bookmark.getCreatedAt())
                 .updatedAt(bookmark.getUpdatedAt())
+                .latitude(bookmark.getLatitude())
+                .longitude(bookmark.getLongitude())
+                .address(bookmark.getAddress())
+                .caption(bookmark.getCaption())
+                .mapEmoji(bookmark.getMapEmoji())
+                .privatePost(bookmark.isPrivatePost())
+                .photos(photoDtos)
+                .leadPhotoUrl(leadPhoto)
                 .build();
     }
 }

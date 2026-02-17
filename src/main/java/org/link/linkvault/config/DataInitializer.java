@@ -25,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final MenuItemRepository menuItemRepository;
     private final InvitationCodeRepository invitationCodeRepository;
     private final PrivacyPolicyRepository privacyPolicyRepository;
+    private final SystemSettingsRepository systemSettingsRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -35,6 +36,7 @@ public class DataInitializer implements CommandLineRunner {
         initMenuItems();
         initInvitationCode();
         initPrivacyPolicy();
+        initSystemSettings();
     }
 
     private void initPermissions() {
@@ -62,7 +64,14 @@ public class DataInitializer implements CommandLineRunner {
                 new Permission("COMMENT_RESTORE", "Restore soft-deleted comments", "MODERATION"),
                 new Permission("CONTENT_PURGE", "Permanently delete soft-deleted content", "MODERATION"),
                 new Permission("COMMENT", "Post comments on bookmarks", "COMMUNITY"),
-                new Permission("VOTE", "Vote on comments", "COMMUNITY")
+                new Permission("VOTE", "Vote on comments", "COMMUNITY"),
+                new Permission("POST_CREATE", "Create posts/stories", "COMMUNITY"),
+                new Permission("POST_EDIT_OWN", "Edit own posts", "COMMUNITY"),
+                new Permission("POST_DELETE_OWN", "Delete own posts", "COMMUNITY"),
+                new Permission("REPORT_SUBMIT", "Submit content reports", "COMMUNITY"),
+                new Permission("REPORT_REVIEW", "Review content reports", "MODERATION"),
+                new Permission("POST_MODERATE", "Moderate any post", "MODERATION"),
+                new Permission("SYSTEM_SETTINGS", "Manage system settings", "ADMIN")
         );
         permissionRepository.saveAll(permissions);
 
@@ -73,17 +82,22 @@ public class DataInitializer implements CommandLineRunner {
                 "AUDIT_VIEW", "BACKUP_RUN", "VIEW_STATS", "MANAGE_ANNOUNCEMENTS",
                 "MANAGE_TAGS", "MANAGE_BOOKMARKS", "BOOKMARK_DELETE_ANY", "BOOKMARK_RESTORE",
                 "MANAGE_QNA", "COMMENT_HIDE", "COMMENT_RESTORE",
-                "COMMENT", "VOTE"
+                "COMMENT", "VOTE", "SYSTEM_SETTINGS"
         ));
 
-        // MODERATOR: limited admin + community
+        // MODERATOR: limited admin + community + moderation
         assignPermissions(Role.MODERATOR, Arrays.asList(
                 "COMMENT_HIDE", "AUDIT_VIEW", "VIEW_STATS",
-                "MANAGE_TAGS", "MANAGE_QNA", "COMMENT", "VOTE"
+                "MANAGE_TAGS", "MANAGE_QNA", "COMMENT", "VOTE",
+                "POST_CREATE", "POST_EDIT_OWN", "POST_DELETE_OWN", "REPORT_SUBMIT",
+                "REPORT_REVIEW", "POST_MODERATE"
         ));
 
         // MEMBER: community only
-        assignPermissions(Role.MEMBER, Arrays.asList("COMMENT", "VOTE"));
+        assignPermissions(Role.MEMBER, Arrays.asList(
+                "COMMENT", "VOTE",
+                "POST_CREATE", "POST_EDIT_OWN", "POST_DELETE_OWN", "REPORT_SUBMIT"
+        ));
 
         log.info("Permissions initialized with default role assignments");
     }
@@ -144,12 +158,14 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing menu items...");
 
         // User Sidebar menu items
-        menuItemRepository.save(MenuItem.builder().label("All Bookmarks").url("/").menuType(MenuType.SIDEBAR)
+        menuItemRepository.save(MenuItem.builder().label("Feed").url("/").menuType(MenuType.SIDEBAR)
                 .displayOrder(1).visible(true).systemItem(true).createdBy("system").build());
-        menuItemRepository.save(MenuItem.builder().label("Saved").url("/saved").menuType(MenuType.SIDEBAR)
+        menuItemRepository.save(MenuItem.builder().label("Map Discover").url("/map").menuType(MenuType.SIDEBAR)
                 .displayOrder(2).visible(true).systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("Saved").url("/saved").menuType(MenuType.SIDEBAR)
+                .displayOrder(3).visible(true).systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Admin Panel").url("/admin").menuType(MenuType.SIDEBAR)
-                .displayOrder(3).visible(true).requiredRole(Role.MODERATOR).systemItem(true).createdBy("system").build());
+                .displayOrder(4).visible(true).requiredRole(Role.MODERATOR).systemItem(true).createdBy("system").build());
 
         // Admin Sidebar menu items
         menuItemRepository.save(MenuItem.builder().label("Dashboard").url("/admin").menuType(MenuType.ADMIN_SIDEBAR)
@@ -172,12 +188,16 @@ public class DataInitializer implements CommandLineRunner {
                 .displayOrder(5).visible(true).requiredPermission("INVITE_ISSUE").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Backup / Restore").url("/admin/backup").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(9).visible(true).requiredPermission("BACKUP_RUN").systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("Reports").url("/admin/reports").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(10).visible(true).requiredPermission("REPORT_REVIEW").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("QnA Management").url("/admin/qna").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(10).visible(true).requiredPermission("MANAGE_QNA").systemItem(true).createdBy("system").build());
+                .displayOrder(11).visible(true).requiredPermission("MANAGE_QNA").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Announcements").url("/admin/announcements").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(11).visible(true).requiredPermission("MANAGE_ANNOUNCEMENTS").systemItem(true).createdBy("system").build());
+                .displayOrder(12).visible(true).requiredPermission("MANAGE_ANNOUNCEMENTS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Privacy Policy").url("/admin/privacy-policy").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(12).visible(true).requiredRole(Role.SUPER_ADMIN).systemItem(true).createdBy("system").build());
+                .displayOrder(13).visible(true).requiredRole(Role.SUPER_ADMIN).systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("Settings").url("/admin/settings").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(14).visible(true).requiredPermission("SYSTEM_SETTINGS").systemItem(true).createdBy("system").build());
 
         log.info("Menu items initialized");
     }
@@ -256,5 +276,43 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         log.info("Default privacy policy v1 created (admin auto-consented)");
+    }
+
+    private void initSystemSettings() {
+        if (systemSettingsRepository.count() > 0) {
+            return;
+        }
+
+        log.info("Initializing system settings...");
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("file-vault.upload-path")
+                .settingValue("./uploads/photos")
+                .description("File upload directory path")
+                .category("FILE_STORAGE")
+                .build());
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("file-vault.allowed-types")
+                .settingValue("image/jpeg,image/png,image/gif,image/webp")
+                .description("Comma-separated list of allowed MIME types")
+                .category("FILE_STORAGE")
+                .build());
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("file-vault.max-file-size-mb")
+                .settingValue("10")
+                .description("Maximum file upload size in megabytes")
+                .category("FILE_STORAGE")
+                .build());
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("report.auto-disable-threshold")
+                .settingValue("5")
+                .description("Number of actioned reports before user account is auto-disabled")
+                .category("MODERATION")
+                .build());
+
+        log.info("System settings initialized with defaults");
     }
 }

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="${pageTitle} + ' - LinkVault'">LinkVault</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 </head>
 <body>
 <div class="app-layout">
@@ -13,36 +14,36 @@
 
     <div class="main-content">
         <div class="header-bar">
-            <h2 th:text="${pageTitle}">All Bookmarks</h2>
+            <h2 th:text="${pageTitle}">Feed</h2>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <form class="search-form" action="/search" method="get">
-                    <input type="text" name="keyword" class="search-input" placeholder="Search bookmarks..."/>
+                    <input type="text" name="keyword" class="search-input" placeholder="Search posts..."/>
                     <button type="submit" class="btn btn-primary">Search</button>
                 </form>
-                <button class="btn btn-primary" onclick="openAddModal()">+ Add</button>
+                <button class="btn btn-primary" onclick="openAddModal()">+ Share a Story</button>
             </div>
         </div>
 
         <!-- Frequently Accessed -->
         <div th:if="${frequent != null and !frequent.isEmpty()}" class="frequent-bar">
             <th:block th:each="b : ${frequent}">
-                <a href="javascript:void(0)" class="frequent-chip js-access-link"
-                   th:data-id="${b.id}" th:data-url="${b.url}">
-                    <img th:if="${b.favicon != null and !b.favicon.isEmpty()}" th:src="${b.favicon}" alt="" onerror="this.style.display='none'"/>
-                    <span th:text="${b.title}">Bookmark</span>
+                <a th:href="@{'/bookmark/' + ${b.id}}" class="frequent-chip">
+                    <img th:if="${b.leadPhotoUrl != null}" th:src="${b.leadPhotoUrl}" alt="" onerror="this.style.display='none'" style="width:24px;height:24px;border-radius:4px;object-fit:cover;"/>
+                    <img th:if="${b.leadPhotoUrl == null and b.favicon != null and !b.favicon.isEmpty()}" th:src="${b.favicon}" alt="" onerror="this.style.display='none'"/>
+                    <span th:text="${b.title}">Post</span>
                 </a>
             </th:block>
         </div>
 
-        <!-- Bookmark List -->
-        <div class="bookmark-grid" th:if="${bookmarks != null and bookmarks.totalElements > 0}">
+        <!-- Post Grid -->
+        <div class="post-grid" th:if="${bookmarks != null and bookmarks.totalElements > 0}">
             <th:block th:each="bookmark : ${bookmarks.content}">
-                <div th:replace="~{fragments/layout :: bookmarkCard(${bookmark})}"></div>
+                <div th:replace="~{fragments/layout :: postCard(${bookmark})}"></div>
             </th:block>
         </div>
         <div class="empty-state" th:if="${bookmarks == null or bookmarks.totalElements == 0}">
-            <h3>No bookmarks yet</h3>
-            <p>Click "+ Add" to save your first bookmark.</p>
+            <h3>No posts yet</h3>
+            <p>Click "+ Share a Story" to share your first place or experience.</p>
         </div>
 
         <!-- Pagination -->
@@ -50,9 +51,11 @@
     </div>
 </div>
 
-<div th:replace="~{fragments/layout :: bookmarkModal}"></div>
+<div th:replace="~{fragments/layout :: postComposeModal}"></div>
 <div th:replace="~{fragments/layout :: folderModal}"></div>
 <div th:replace="~{fragments/layout :: searchModal}"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:src="@{/js/map.js}"></script>
 <script th:src="@{/js/app.js}"></script>
 </body>
 </html>

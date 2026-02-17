@@ -6,12 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="${pageTitle} + ' - LinkVault'">Bookmark - LinkVault</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 </head>
 <body>
 <div class="app-layout">
     <div th:replace="~{fragments/layout :: sidebar}"></div>
 
     <div class="main-content">
+        <!-- Photo Slider -->
+        <div class="photo-slider-container" th:if="${bookmark.photos != null and !bookmark.photos.isEmpty()}">
+            <div class="photo-slider-viewport" id="sliderViewport">
+                <div class="photo-slider-track" id="mainSlider">
+                    <div th:each="photo, stat : ${bookmark.photos}"
+                         th:class="'photo-slide' + (${stat.index == 0} ? ' active' : '')"
+                         th:data-index="${stat.index}">
+                        <div class="info-label" th:text="'PHOTO / 0' + ${stat.index + 1}">PHOTO / 01</div>
+                        <div class="photo-frame">
+                            <img th:src="${photo.url}" alt="" loading="lazy"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mono-nav" th:if="${bookmark.photos.size() > 1}">
+                <div th:each="photo, stat : ${bookmark.photos}"
+                     th:class="'bar' + (${stat.index == 0} ? ' active' : '')"
+                     th:data-index="${stat.index}"
+                     th:onclick="'goToSlide(' + ${stat.index} + ')'"></div>
+            </div>
+            <div class="top-btn" id="sliderGoTop" onclick="goToSlide(0)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+            </div>
+        </div>
+
         <!-- Bookmark Info -->
         <div class="bookmark-detail">
             <div class="bookmark-header" style="margin-bottom: 12px;">
@@ -20,19 +48,44 @@
                      onerror="this.style.display='none'"/>
                 <h2 style="flex:1;" th:text="${bookmark.title}">Title</h2>
             </div>
-            <a th:href="${bookmark.url}" target="_blank" style="font-size: 0.85rem; word-break: break-all;"
-               th:text="${bookmark.url}">https://example.com</a>
+
+            <!-- Location -->
+            <div th:if="${bookmark.latitude != null and bookmark.longitude != null}" style="margin-bottom: 16px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;color:var(--text-secondary);font-size:0.9rem;">
+                    <span>&#128205;</span>
+                    <span th:if="${bookmark.address != null}" th:text="${bookmark.address}">Address</span>
+                    <span th:if="${bookmark.address == null}">Location set</span>
+                </div>
+                <div id="detailMap" class="detail-map" th:data-lat="${bookmark.latitude}" th:data-lng="${bookmark.longitude}" th:data-emoji="${bookmark.mapEmoji}"></div>
+            </div>
+
+            <!-- Caption -->
+            <div th:if="${bookmark.caption != null and !bookmark.caption.isEmpty()}"
+                 style="margin-bottom: 16px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap;"
+                 th:text="${bookmark.caption}">Caption</div>
+
+            <!-- URL (optional) -->
+            <div th:if="${bookmark.url != null and !bookmark.url.isEmpty()}" style="margin-bottom: 12px;">
+                <a th:href="${bookmark.url}" target="_blank" style="font-size: 0.85rem; word-break: break-all;"
+                   th:text="${bookmark.url}">https://example.com</a>
+            </div>
+
             <p th:if="${bookmark.description != null and !bookmark.description.isEmpty()}"
                style="margin-top: 12px; color: var(--text-secondary);"
                th:text="${bookmark.description}">Description</p>
             <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
                 <a th:each="tag : ${bookmark.tagNames}" th:href="@{'/tag/' + ${tag}}" class="tag-badge" th:text="${tag}">tag</a>
             </div>
-            <div style="margin-top: 8px; font-size: 0.78rem; color: var(--text-muted);">
+            <div style="margin-top: 8px; font-size: 0.78rem; color: var(--text-muted); display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 <span th:if="${bookmark.ownerUsername != null}" th:text="'by ' + ${bookmark.ownerUsername}"></span>
                 <span th:if="${bookmark.folderName != null}" th:text="'Folder: ' + ${bookmark.folderName}"></span>
                 <span th:text="'Views: ' + ${bookmark.accessCount}">Views: 0</span>
                 <span th:text="'Comments: ' + ${bookmark.commentCount}">Comments: 0</span>
+                <span style="margin-left:auto;display:flex;gap:6px;">
+                    <button th:if="${currentUser == bookmark.ownerUsername}" class="btn btn-sm btn-primary" onclick="openEditModal(bookmarkId)">Edit</button>
+                    <button th:if="${currentUser == bookmark.ownerUsername}" class="btn btn-sm btn-danger" onclick="deleteBookmark(bookmarkId)">Delete</button>
+                    <button class="btn btn-sm btn-outline" onclick="reportContent('POST', bookmarkId)">Report</button>
+                </span>
             </div>
         </div>
 
@@ -52,22 +105,112 @@
             <div id="commentsContainer">
                 <div class="empty-state" id="noComments">
                     <h3>No comments yet</h3>
-                    <p>Be the first to comment on this bookmark.</p>
+                    <p>Be the first to comment on this post.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div th:replace="~{fragments/layout :: bookmarkModal}"></div>
+<div th:replace="~{fragments/layout :: postComposeModal}"></div>
 <div th:replace="~{fragments/layout :: folderModal}"></div>
 <div th:replace="~{fragments/layout :: searchModal}"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:src="@{/js/map.js}"></script>
 <script th:src="@{/js/app.js}"></script>
 <script th:inline="javascript">
 var bookmarkId = /*[[${bookmark.id}]]*/ 0;
 var currentUserId = /*[[${currentUserId}]]*/ 0;
 </script>
 <script th:src="@{/js/comment.js}"></script>
+<script>
+// Override deleteBookmark on detail page to redirect home after deletion
+var _origDeleteBookmark = deleteBookmark;
+deleteBookmark = function(id) {
+    if (!confirm('Delete this post?')) return;
+    fetch('/api/bookmarks/' + id, { method: 'DELETE' })
+        .then(function() {
+            showToast('Post deleted');
+            setTimeout(function() { window.location.href = '/'; }, 500);
+        })
+        .catch(function() { showToast('Error deleting post', 'error'); });
+};
+
+// Init detail map if present
+document.addEventListener('DOMContentLoaded', function() {
+    var mapEl = document.getElementById('detailMap');
+    if (mapEl && mapEl.dataset.lat && mapEl.dataset.lng) {
+        var emoji = mapEl.dataset.emoji || null;
+        initDetailMap(parseFloat(mapEl.dataset.lat), parseFloat(mapEl.dataset.lng), emoji);
+    }
+});
+
+// ===== Photo Slider (Fixed Frame Minimal) =====
+var sliderCurrentIdx = 0;
+var sliderTotal = document.querySelectorAll('.photo-slide').length;
+var sliderIsMoving = false;
+
+function goToSlide(index) {
+    if (index < 0 || index >= sliderTotal) return;
+    sliderIsMoving = true;
+    sliderCurrentIdx = index;
+
+    var slider = document.getElementById('mainSlider');
+    if (slider) {
+        slider.style.transform = 'translateY(-' + (index * 100) + '%)';
+    }
+
+    document.querySelectorAll('.photo-slide').forEach(function(s, i) {
+        s.classList.toggle('active', i === index);
+    });
+    document.querySelectorAll('.mono-nav .bar').forEach(function(b, i) {
+        b.classList.toggle('active', i === index);
+    });
+
+    var goTop = document.getElementById('sliderGoTop');
+    if (goTop) {
+        if (index === sliderTotal - 1 && sliderTotal > 1) {
+            goTop.classList.add('visible');
+        } else {
+            goTop.classList.remove('visible');
+        }
+    }
+
+    setTimeout(function() { sliderIsMoving = false; }, 1000);
+}
+
+// Wheel handler on slider viewport only
+(function() {
+    var viewport = document.getElementById('sliderViewport');
+    if (!viewport || sliderTotal <= 1) return;
+    viewport.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        if (sliderIsMoving) return;
+        if (e.deltaY > 0 && sliderCurrentIdx < sliderTotal - 1) {
+            goToSlide(sliderCurrentIdx + 1);
+        } else if (e.deltaY < 0 && sliderCurrentIdx > 0) {
+            goToSlide(sliderCurrentIdx - 1);
+        }
+    }, { passive: false });
+
+    // Touch swipe support
+    var touchStartY = 0;
+    viewport.addEventListener('touchstart', function(e) {
+        touchStartY = e.changedTouches[0].clientY;
+    }, { passive: true });
+    viewport.addEventListener('touchend', function(e) {
+        if (sliderIsMoving) return;
+        var diff = touchStartY - e.changedTouches[0].clientY;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0 && sliderCurrentIdx < sliderTotal - 1) {
+                goToSlide(sliderCurrentIdx + 1);
+            } else if (diff < 0 && sliderCurrentIdx > 0) {
+                goToSlide(sliderCurrentIdx - 1);
+            }
+        }
+    }, { passive: true });
+})();
+</script>
 </body>
 </html>

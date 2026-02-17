@@ -31,10 +31,16 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB
-      max-request-size: 10MB
+      max-request-size: 50MB
 
 server:
   port: 8088
+
+linkvault:
+  file-vault:
+    upload-path: ./uploads/photos
+    allowed-types: image/jpeg,image/png,image/gif,image/webp
+    max-file-size-mb: 10
 
 logging:
   level:
