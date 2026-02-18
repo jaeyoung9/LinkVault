@@ -97,15 +97,8 @@
     </div>
 </div>
 
+<script th:src="@{/js/admin.js}"></script>
 <script>
-const csrf = document.querySelector('meta[name="_csrf"]');
-const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
-function getHeaders() {
-    const h = { 'Content-Type': 'application/json' };
-    if (csrf && csrfHeader) h[csrfHeader.content] = csrf.content;
-    return h;
-}
-
 function showCreateModal() {
     document.getElementById('modalTitle').textContent = 'Create Transparency Report';
     document.getElementById('reportId').value = '';
@@ -118,11 +111,10 @@ function showCreateModal() {
 }
 
 function editReport(id) {
-    fetch('/api/admin/transparency-reports?size=100', { headers: getHeaders() })
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/transparency-reports?size=100')
         .then(function(data) {
             var report = (data.content || []).find(function(r) { return r.id === id; });
-            if (!report) return alert('Report not found');
+            if (!report) { showToast('Report not found', 'error'); return; }
             document.getElementById('modalTitle').textContent = 'Edit Report';
             document.getElementById('reportId').value = id;
             document.getElementById('reportTitleInput').value = report.title;
@@ -131,7 +123,8 @@ function editReport(id) {
             document.getElementById('reportPassRevenue').value = (report.totalPassRevenueCents / 100).toFixed(2);
             document.getElementById('reportContent').value = report.content || '';
             document.getElementById('reportModal').style.display = 'flex';
-        });
+        })
+        .catch(function(e) { showToast((e && e.message) || 'Failed to load report', 'error'); });
 }
 
 function closeModal() {
@@ -149,29 +142,28 @@ function saveReport() {
     };
     var method = id ? 'PUT' : 'POST';
     var url = id ? '/api/admin/transparency-reports/' + id : '/api/admin/transparency-reports';
-    fetch(url, { method: method, headers: getHeaders(), body: JSON.stringify(body) })
-        .then(function(r) { if (!r.ok) throw new Error('Save failed'); return r.json(); })
+    adminFetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         .then(function() { location.reload(); })
-        .catch(function(e) { alert(e.message); });
+        .catch(function(e) { showToast((e && e.message) || 'Save failed', 'error'); });
 }
 
 function publishReport(id) {
-    fetch('/api/admin/transparency-reports/' + id + '/publish', {
-        method: 'PATCH', headers: getHeaders()
-    }).then(function() { location.reload(); });
+    adminFetch('/api/admin/transparency-reports/' + id + '/publish', { method: 'PATCH' })
+        .then(function() { location.reload(); })
+        .catch(function(e) { showToast((e && e.message) || 'Publish failed', 'error'); });
 }
 
 function unpublishReport(id) {
-    fetch('/api/admin/transparency-reports/' + id + '/unpublish', {
-        method: 'PATCH', headers: getHeaders()
-    }).then(function() { location.reload(); });
+    adminFetch('/api/admin/transparency-reports/' + id + '/unpublish', { method: 'PATCH' })
+        .then(function() { location.reload(); })
+        .catch(function(e) { showToast((e && e.message) || 'Unpublish failed', 'error'); });
 }
 
 function deleteReport(id) {
     if (!confirm('Delete this report?')) return;
-    fetch('/api/admin/transparency-reports/' + id, {
-        method: 'DELETE', headers: getHeaders()
-    }).then(function() { location.reload(); });
+    adminFetch('/api/admin/transparency-reports/' + id, { method: 'DELETE' })
+        .then(function() { location.reload(); })
+        .catch(function(e) { showToast((e && e.message) || 'Delete failed', 'error'); });
 }
 </script>
 </body>

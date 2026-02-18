@@ -57,28 +57,21 @@
     </div>
 </div>
 
+<script th:src="@{/js/admin.js}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const csrf = document.querySelector('meta[name="_csrf"]');
-    const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
-    const headers = { 'Content-Type': 'application/json' };
-    if (csrf && csrfHeader) {
-        headers[csrfHeader.content] = csrf.content;
-    }
-
-    fetch('/api/admin/payments?size=10', { headers: headers })
-        .then(r => r.json())
-        .then(data => {
-            const list = document.getElementById('payments-list');
-            const passes = data.content || [];
+    adminFetch('/api/admin/payments?size=10')
+        .then(function(data) {
+            var list = document.getElementById('payments-list');
+            var passes = (data && data.content) || [];
             if (passes.length === 0) {
                 list.innerHTML = '<p style="color: var(--text-muted);">No payments yet.</p>';
                 return;
             }
-            let html = '<table style="width: 100%; font-size: 0.85rem;"><thead><tr><th>User</th><th>Type</th><th>Status</th><th>Expires</th><th>Action</th></tr></thead><tbody>';
+            var html = '<table style="width: 100%; font-size: 0.85rem;"><thead><tr><th>User</th><th>Type</th><th>Status</th><th>Expires</th><th>Action</th></tr></thead><tbody>';
             passes.forEach(function(p) {
-                const status = p.refunded ? 'Refunded' : (p.active ? 'Active' : 'Expired');
-                const statusColor = p.refunded ? 'var(--warning)' : (p.active ? 'var(--success)' : 'var(--text-muted)');
+                var status = p.refunded ? 'Refunded' : (p.active ? 'Active' : 'Expired');
+                var statusColor = p.refunded ? 'var(--warning)' : (p.active ? 'var(--success)' : 'var(--text-muted)');
                 html += '<tr>';
                 html += '<td>' + (p.username || 'N/A') + '</td>';
                 html += '<td>' + p.type + '</td>';
@@ -102,21 +95,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function refundPayment(paymentIntentId) {
     if (!confirm('Are you sure you want to refund this payment?')) return;
-    const csrf = document.querySelector('meta[name="_csrf"]');
-    const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
-    const headers = { 'Content-Type': 'application/json' };
-    if (csrf && csrfHeader) {
-        headers[csrfHeader.content] = csrf.content;
-    }
-    fetch('/api/admin/payments/' + paymentIntentId + '/refund', {
-        method: 'POST', headers: headers
-    })
-    .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/payments/' + paymentIntentId + '/refund', { method: 'POST' })
     .then(function(data) {
-        alert(data.message || 'Refund processed');
+        showToast((data && data.message) || 'Refund processed');
         location.reload();
     })
-    .catch(function() { alert('Refund failed'); });
+    .catch(function(err) { showToast((err && err.message) || 'Refund failed', 'error'); });
 }
 </script>
 </body>

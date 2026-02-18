@@ -293,7 +293,7 @@ public class AdminApiController {
     @GetMapping("/menus")
     @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<List<MenuItemResponseDto>> getMenuItems(
-            @RequestParam org.link.linkvault.entity.MenuType menuType) {
+            @RequestParam(defaultValue = "SIDEBAR") org.link.linkvault.entity.MenuType menuType) {
         return ResponseEntity.ok(menuService.getAllMenuItems(menuType));
     }
 
