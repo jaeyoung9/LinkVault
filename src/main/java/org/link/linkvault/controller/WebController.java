@@ -334,7 +334,7 @@ public class WebController {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         populateCommonModel(model, currentUser);
         model.addAttribute("settings", userSettingsService.getSettings(currentUser));
-        model.addAttribute("userEmail", currentUser.getEmail());
+        model.addAttribute("userEmail", AuditDetailFormatter.maskEmail(currentUser.getEmail()));
         model.addAttribute("pageTitle", "Settings");
 
         // Feature flags for conditional tab visibility

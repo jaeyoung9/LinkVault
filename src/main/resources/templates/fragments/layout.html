@@ -176,7 +176,7 @@
 
 <!-- Post Card Fragment (photo-first) -->
 <div th:fragment="postCard(bookmark)" class="post-card" th:data-id="${bookmark.id}">
-    <div class="post-card-img post-card-img-placeholder" th:if="${bookmark.leadPhotoUrl != null}">
+    <div class="post-card-img" th:if="${bookmark.leadPhotoUrl != null}">
         <img th:src="${bookmark.leadPhotoUrl}" alt="" loading="lazy"/>
     </div>
     <div class="post-card-img post-card-img-placeholder" th:if="${bookmark.leadPhotoUrl == null}">
