@@ -33,8 +33,9 @@ public class AnnouncementApiController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getUserEntity(userDetails.getUsername());
+        AnnouncementResponseDto dto = announcementService.findById(id, user);
         announcementService.markAsRead(id, user);
-        return ResponseEntity.ok(announcementService.findById(id, user));
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/{id}/acknowledge")

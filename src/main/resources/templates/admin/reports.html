@@ -60,9 +60,9 @@ function loadReports() {
     var url = '/api/admin/reports?size=50';
     if (status) url += '&status=' + status;
 
-    fetch(url)
-        .then(function(r) { return r.json(); })
+    adminFetch(url)
         .then(function(data) {
+            data = data || {};
             var tbody = document.getElementById('reportsTableBody');
             if (!data.content || data.content.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">No reports found</td></tr>';
@@ -91,9 +91,10 @@ function loadReports() {
             });
             tbody.innerHTML = html;
         })
-        .catch(function() {
+        .catch(function(err) {
+            var msg = (err && err.message) || 'Error loading reports';
             document.getElementById('reportsTableBody').innerHTML =
-                '<tr><td colspan="8" style="text-align:center;color:var(--danger);">Error loading reports</td></tr>';
+                '<tr><td colspan="8" style="text-align:center;color:var(--danger);">' + escapeHtml(msg) + '</td></tr>';
         });
 }
 

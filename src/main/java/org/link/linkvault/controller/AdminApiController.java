@@ -322,6 +322,12 @@ public class AdminApiController {
 
     // --- QnA Management ---
 
+    @GetMapping("/qna/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_QNA')")
+    public ResponseEntity<QnaArticleResponseDto> getQnaArticle(@PathVariable Long id) {
+        return ResponseEntity.ok(qnaArticleService.findByIdAdmin(id));
+    }
+
     @PostMapping("/qna")
     @PreAuthorize("hasAuthority('MANAGE_QNA')")
     public ResponseEntity<QnaArticleResponseDto> createQnaArticle(
@@ -354,6 +360,12 @@ public class AdminApiController {
     }
 
     // --- Announcement Management ---
+
+    @GetMapping("/announcements/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
+    public ResponseEntity<AnnouncementResponseDto> getAnnouncement(@PathVariable Long id) {
+        return ResponseEntity.ok(announcementService.findByIdAdmin(id));
+    }
 
     @PostMapping("/announcements")
     @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")

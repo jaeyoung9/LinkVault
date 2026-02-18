@@ -37,35 +37,93 @@
 
 <script th:src="@{/js/admin.js}"></script>
 <script>
+var canDelete = [[${#authorization.expression('hasAuthority(''COMMENT_HIDE'')')}]];
+var canRestore = [[${#authorization.expression('hasAuthority(''COMMENT_RESTORE'')')}]];
+var canPurge = [[${#authorization.expression('hasAuthority(''CONTENT_PURGE'')')}]];
+
+function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function loadComments() {
-    fetch('/api/admin/comments')
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/comments')
         .then(function(comments) {
             var tbody = document.getElementById('commentsBody');
             tbody.innerHTML = '';
             comments.forEach(function(c) {
                 var tr = document.createElement('tr');
                 var content = c.content.length > 80 ? c.content.substring(0, 80) + '...' : c.content;
-                var status = c.deleted
-                    ? '<span class="badge badge-danger">Deleted</span>'
-                    : (c.edited ? '<span class="badge badge-warning">Edited</span>' : '<span class="badge badge-success">Active</span>');
-                tr.innerHTML =
-                    '<td>' + c.id + '</td>' +
-                    '<td>' + c.username + '</td>' +
-                    '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + content + '</td>' +
-                    '<td><a href="/bookmark/' + c.bookmarkId + '">View</a></td>' +
-                    '<td>' + c.likeCount + ' / ' + c.dislikeCount + '</td>' +
-                    '<td>' + status + '</td>' +
-                    '<td>' + (c.createdAt ? c.createdAt.replace('T', ' ').substring(0, 16) : '-') + '</td>' +
-                    '<td>' +
-                    (!c.deleted ? '<button class="btn btn-sm btn-danger" onclick="moderateDelete(' + c.id + ')">Delete</button>' :
-                        '<button class="btn btn-sm btn-outline" onclick="restoreComment(' + c.id + ')">Restore</button> ' +
-                        '<button class="btn btn-sm btn-danger" onclick="purgeComment(' + c.id + ')">Purge</button>') +
-                    '</td>';
+
+                var tdId = document.createElement('td');
+                tdId.textContent = c.id;
+                tr.appendChild(tdId);
+
+                var tdUser = document.createElement('td');
+                tdUser.textContent = c.username;
+                tr.appendChild(tdUser);
+
+                var tdContent = document.createElement('td');
+                tdContent.style.cssText = 'max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+                tdContent.textContent = content;
+                tr.appendChild(tdContent);
+
+                var tdBm = document.createElement('td');
+                var bmLink = document.createElement('a');
+                bmLink.href = '/bookmark/' + c.bookmarkId;
+                bmLink.textContent = 'View';
+                tdBm.appendChild(bmLink);
+                tr.appendChild(tdBm);
+
+                var tdLikes = document.createElement('td');
+                tdLikes.textContent = c.likeCount + ' / ' + c.dislikeCount;
+                tr.appendChild(tdLikes);
+
+                var tdStatus = document.createElement('td');
+                var statusSpan = document.createElement('span');
+                statusSpan.className = 'badge ' + (c.deleted ? 'badge-danger' : (c.edited ? 'badge-warning' : 'badge-success'));
+                statusSpan.textContent = c.deleted ? 'Deleted' : (c.edited ? 'Edited' : 'Active');
+                tdStatus.appendChild(statusSpan);
+                tr.appendChild(tdStatus);
+
+                var tdDate = document.createElement('td');
+                tdDate.textContent = c.createdAt ? c.createdAt.replace('T', ' ').substring(0, 16) : '-';
+                tr.appendChild(tdDate);
+
+                var tdActions = document.createElement('td');
+                if (!c.deleted) {
+                    if (canDelete) {
+                        var delBtn = document.createElement('button');
+                        delBtn.className = 'btn btn-sm btn-danger';
+                        delBtn.textContent = 'Delete';
+                        delBtn.addEventListener('click', function() { moderateDelete(c.id); });
+                        tdActions.appendChild(delBtn);
+                    }
+                } else {
+                    if (canRestore) {
+                        var restoreBtn = document.createElement('button');
+                        restoreBtn.className = 'btn btn-sm btn-outline';
+                        restoreBtn.textContent = 'Restore';
+                        restoreBtn.addEventListener('click', function() { restoreComment(c.id); });
+                        tdActions.appendChild(restoreBtn);
+                        tdActions.appendChild(document.createTextNode(' '));
+                    }
+                    if (canPurge) {
+                        var purgeBtn = document.createElement('button');
+                        purgeBtn.className = 'btn btn-sm btn-danger';
+                        purgeBtn.textContent = 'Purge';
+                        purgeBtn.addEventListener('click', function() { purgeComment(c.id); });
+                        tdActions.appendChild(purgeBtn);
+                    }
+                }
+                tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         })
-        .catch(function() { showToast('Error loading comments', 'error'); });
+        .catch(function(err) { showToast((err && err.message) || 'Error loading comments', 'error'); });
 }
 
 function moderateDelete(id) {

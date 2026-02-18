@@ -71,33 +71,78 @@
 
 <script th:src="@{/js/admin.js}"></script>
 <script>
+function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function loadInvitations() {
-    fetch('/api/admin/invitations')
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/invitations')
         .then(function(codes) {
             var tbody = document.getElementById('invBody');
             tbody.innerHTML = '';
             codes.forEach(function(c) {
                 var tr = document.createElement('tr');
-                var statusBadge = c.usable
-                    ? '<span class="badge badge-success">Usable</span>'
-                    : '<span class="badge badge-danger">' + (c.active ? 'Expired/Full' : 'Inactive') + '</span>';
-                tr.innerHTML =
-                    '<td><code style="background:var(--bg-card);padding:2px 8px;border-radius:4px;cursor:pointer;" onclick="copyCode(\'' + c.code + '\')">' + c.code + '</code></td>' +
-                    '<td>' + (c.createdByUsername || '-') + '</td>' +
-                    '<td>' + c.currentUses + ' / ' + (c.maxUses > 0 ? c.maxUses : 'unlimited') + '</td>' +
-                    '<td><span class="badge badge-info">' + (c.assignedRole || 'MEMBER') + '</span></td>' +
-                    '<td>' + (c.expiresAt ? c.expiresAt.replace('T', ' ').substring(0, 16) : 'Never') + '</td>' +
-                    '<td style="font-size:0.78rem;">' + (c.note || '-') + '</td>' +
-                    '<td>' + statusBadge + '</td>' +
-                    '<td>' +
-                    '<button class="btn btn-sm btn-outline" onclick="toggleInv(' + c.id + ')">' + (c.active ? 'Deactivate' : 'Activate') + '</button> ' +
-                    '<button class="btn btn-sm btn-danger" onclick="deleteInv(' + c.id + ')">Del</button>' +
-                    '</td>';
+
+                var tdCode = document.createElement('td');
+                var codeEl = document.createElement('code');
+                codeEl.style.cssText = 'background:var(--bg-card);padding:2px 8px;border-radius:4px;cursor:pointer;';
+                codeEl.textContent = c.code;
+                codeEl.addEventListener('click', function() { copyCode(c.code); });
+                tdCode.appendChild(codeEl);
+                tr.appendChild(tdCode);
+
+                var tdCreator = document.createElement('td');
+                tdCreator.textContent = c.createdByUsername || '-';
+                tr.appendChild(tdCreator);
+
+                var tdUses = document.createElement('td');
+                tdUses.textContent = c.currentUses + ' / ' + (c.maxUses > 0 ? c.maxUses : 'unlimited');
+                tr.appendChild(tdUses);
+
+                var tdRole = document.createElement('td');
+                var roleSpan = document.createElement('span');
+                roleSpan.className = 'badge badge-info';
+                roleSpan.textContent = c.assignedRole || 'MEMBER';
+                tdRole.appendChild(roleSpan);
+                tr.appendChild(tdRole);
+
+                var tdExpiry = document.createElement('td');
+                tdExpiry.textContent = c.expiresAt ? c.expiresAt.replace('T', ' ').substring(0, 16) : 'Never';
+                tr.appendChild(tdExpiry);
+
+                var tdNote = document.createElement('td');
+                tdNote.style.fontSize = '0.78rem';
+                tdNote.textContent = c.note || '-';
+                tr.appendChild(tdNote);
+
+                var tdStatus = document.createElement('td');
+                var statusSpan = document.createElement('span');
+                statusSpan.className = 'badge ' + (c.usable ? 'badge-success' : 'badge-danger');
+                statusSpan.textContent = c.usable ? 'Usable' : (c.active ? 'Expired/Full' : 'Inactive');
+                tdStatus.appendChild(statusSpan);
+                tr.appendChild(tdStatus);
+
+                var tdActions = document.createElement('td');
+                var toggleBtn = document.createElement('button');
+                toggleBtn.className = 'btn btn-sm btn-outline';
+                toggleBtn.textContent = c.active ? 'Deactivate' : 'Activate';
+                toggleBtn.addEventListener('click', function() { toggleInv(c.id); });
+                tdActions.appendChild(toggleBtn);
+                tdActions.appendChild(document.createTextNode(' '));
+                var delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-sm btn-danger';
+                delBtn.textContent = 'Del';
+                delBtn.addEventListener('click', function() { deleteInv(c.id); });
+                tdActions.appendChild(delBtn);
+                tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         })
-        .catch(function() { showToast('Error loading invitations', 'error'); });
+        .catch(function(err) { showToast((err && err.message) || 'Error loading invitations', 'error'); });
 }
 
 function openInvModal() { document.getElementById('invModal').classList.add('active'); }
@@ -126,9 +171,27 @@ function generateCode(event) {
 }
 
 function copyCode(code) {
-    navigator.clipboard.writeText(code).then(function() {
-        showToast('Code copied: ' + code);
-    });
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function() {
+            showToast('Code copied: ' + code);
+        }).catch(function() {
+            showToast('Failed to copy code to clipboard', 'error');
+        });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            showToast('Code copied: ' + code);
+        } catch (e) {
+            showToast('Failed to copy code to clipboard', 'error');
+        }
+        document.body.removeChild(ta);
+    }
 }
 
 function toggleInv(id) {

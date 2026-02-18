@@ -44,6 +44,19 @@ public class AnnouncementService {
     public AnnouncementResponseDto findById(Long id, User user) {
         Announcement announcement = announcementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Announcement not found: " + id));
+        if (announcement.getStatus() != AnnouncementStatus.PUBLISHED) {
+            throw new ResourceNotFoundException("Announcement not found: " + id);
+        }
+        if (announcement.getTargetRole() != null && announcement.getTargetRole() != user.getRole()) {
+            throw new ResourceNotFoundException("Announcement not found: " + id);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (announcement.getStartAt() != null && announcement.getStartAt().isAfter(now)) {
+            throw new ResourceNotFoundException("Announcement not found: " + id);
+        }
+        if (announcement.getEndAt() != null && announcement.getEndAt().isBefore(now)) {
+            throw new ResourceNotFoundException("Announcement not found: " + id);
+        }
         Optional<AnnouncementRead> readOpt = announcementReadRepository
                 .findByUserIdAndAnnouncementId(user.getId(), id);
         boolean isRead = readOpt.isPresent();
@@ -137,6 +150,12 @@ public class AnnouncementService {
         }
         announcementReadRepository.deleteByAnnouncementId(id);
         announcementRepository.deleteById(id);
+    }
+
+    public AnnouncementResponseDto findByIdAdmin(Long id) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Announcement not found: " + id));
+        return AnnouncementResponseDto.from(announcement);
     }
 
     public Page<AnnouncementResponseDto> findAllAdmin(Pageable pageable) {

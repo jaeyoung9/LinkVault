@@ -117,8 +117,7 @@ function closeQnaModal() {
 }
 
 function editQna(id) {
-    fetch('/api/qna/' + id)
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/qna/' + id)
         .then(function(a) {
             document.getElementById('qnaModal').classList.add('active');
             document.getElementById('qnaModalTitle').textContent = 'Edit QnA Article';
@@ -130,7 +129,12 @@ function editQna(id) {
             document.getElementById('qnaTags').value = a.tags || '';
             document.getElementById('qnaLinks').value = a.relatedLinks || '';
         })
-        .catch(function() { showToast('Error loading article', 'error'); });
+        .catch(function(err) {
+            var msg = (err && err.status === 403) ? 'Insufficient permission' :
+                      (err && err.status === 404) ? 'Article not found' :
+                      (err && err.message) || 'Error loading article';
+            showToast(msg, 'error');
+        });
 }
 
 function saveQna(e) {

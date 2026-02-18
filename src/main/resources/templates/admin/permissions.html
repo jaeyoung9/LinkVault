@@ -56,11 +56,10 @@ function loadPermissions() {
         return;
     }
 
-    fetch('/api/admin/permissions/' + role)
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/permissions/' + role)
         .then(function(permissions) {
             tbody.innerHTML = '';
-            permissions.forEach(function(p) {
+            (permissions || []).forEach(function(p) {
                 var tr = document.createElement('tr');
                 tr.innerHTML =
                     '<td style="font-weight:600;">' + p.name + '</td>' +
@@ -74,7 +73,7 @@ function loadPermissions() {
             });
             table.style.display = '';
         })
-        .catch(function() { showToast('Error loading permissions', 'error'); });
+        .catch(function(err) { showToast((err && err.message) || 'Error loading permissions', 'error'); });
 }
 
 function togglePermission(role, permissionId, granted) {

@@ -202,10 +202,10 @@ public class DataInitializer implements CommandLineRunner {
                 .displayOrder(1).visible(true).requiredPermission("VIEW_STATS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Users").url("/admin/users").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(2).visible(true).requiredPermission("USER_MANAGE").systemItem(true).createdBy("system").build());
-        menuItemRepository.save(MenuItem.builder().label("All Bookmarks").url("/admin/bookmarks").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(3).visible(true).requiredPermission("MANAGE_BOOKMARKS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Tag Management").url("/admin/tags").menuType(MenuType.ADMIN_SIDEBAR)
-                .displayOrder(4).visible(true).requiredPermission("MANAGE_TAGS").systemItem(true).createdBy("system").build());
+                .displayOrder(3).visible(true).requiredPermission("MANAGE_TAGS").systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("All Bookmarks").url("/admin/bookmarks").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(4).visible(true).requiredPermission("MANAGE_BOOKMARKS").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Audit Log").url("/admin/audit").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(6).visible(true).requiredPermission("AUDIT_VIEW").systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Menu Management").url("/admin/menus").menuType(MenuType.ADMIN_SIDEBAR)

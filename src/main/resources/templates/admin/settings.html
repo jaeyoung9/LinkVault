@@ -36,8 +36,7 @@ function escapeHtml(str) {
 }
 
 function loadSettings() {
-    fetch('/api/admin/settings')
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/settings')
         .then(function(settings) {
             var container = document.getElementById('settingsContainer');
             if (!settings || settings.length === 0) {
@@ -77,9 +76,10 @@ function loadSettings() {
 
             container.innerHTML = html;
         })
-        .catch(function() {
+        .catch(function(err) {
+            var msg = (err && err.message) || 'Error loading settings';
             document.getElementById('settingsContainer').innerHTML =
-                '<div style="text-align:center;padding:40px;color:var(--danger);">Error loading settings</div>';
+                '<div style="text-align:center;padding:40px;color:var(--danger);">' + msg + '</div>';
         });
 }
 

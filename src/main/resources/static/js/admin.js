@@ -17,8 +17,13 @@ function adminFetch(url, options) {
     return fetch(url, options).then(function(r) {
         if (!r.ok) {
             if (r.status === 204) return null;
-            return r.json().then(function(e) { throw e; }, function() {
-                throw { message: 'Request failed (' + r.status + ')' };
+            var status = r.status;
+            return r.json().then(function(e) {
+                if (!e.status) e.status = status;
+                if (status === 403 && !e.message) e.message = 'Insufficient permission';
+                throw e;
+            }, function() {
+                throw { message: status === 403 ? 'Insufficient permission' : 'Request failed (' + status + ')', status: status };
             });
         }
         if (r.status === 204) return null;

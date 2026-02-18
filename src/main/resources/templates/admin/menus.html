@@ -97,14 +97,13 @@ function switchTab(type, btn) {
 }
 
 function loadMenuItems() {
-    fetch('/api/admin/menus?menuType=' + currentMenuType)
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/menus?menuType=' + currentMenuType)
         .then(function(items) {
             var tbody = document.getElementById('menuBody');
             tbody.innerHTML = '';
-            renderMenuRows(items, tbody, 0);
+            renderMenuRows(items || [], tbody, 0);
         })
-        .catch(function() { showToast('Error loading menus', 'error'); });
+        .catch(function(err) { showToast((err && err.message) || 'Error loading menus', 'error'); });
 }
 
 function renderMenuRows(items, tbody, depth) {

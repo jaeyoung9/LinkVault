@@ -50,11 +50,11 @@
                 <td th:text="${bookmark.accessCount}">0</td>
                 <td th:text="${bookmark.createdAt != null} ? ${#temporals.format(bookmark.createdAt, 'yyyy-MM-dd')} : '-'">2024-01-01</td>
                 <td th:if="${!bookmark.deleted}">
-                    <button class="btn btn-sm btn-danger js-admin-delete-bookmark" th:data-id="${bookmark.id}">Del</button>
+                    <button sec:authorize="hasAuthority('BOOKMARK_DELETE_ANY')" class="btn btn-sm btn-danger js-admin-delete-bookmark" th:data-id="${bookmark.id}">Del</button>
                 </td>
                 <td th:if="${bookmark.deleted}">
-                    <button class="btn btn-sm btn-outline js-restore-bookmark" th:data-id="${bookmark.id}">Restore</button>
-                    <button class="btn btn-sm btn-danger js-purge-bookmark" th:data-id="${bookmark.id}">Purge</button>
+                    <button sec:authorize="hasAuthority('BOOKMARK_RESTORE')" class="btn btn-sm btn-outline js-restore-bookmark" th:data-id="${bookmark.id}">Restore</button>
+                    <button sec:authorize="hasAuthority('CONTENT_PURGE')" class="btn btn-sm btn-danger js-purge-bookmark" th:data-id="${bookmark.id}">Purge</button>
                 </td>
             </tr>
             </tbody>

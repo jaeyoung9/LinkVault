@@ -146,8 +146,7 @@ function closeAnnModal() {
 }
 
 function editAnn(id) {
-    fetch('/api/announcements/' + id)
-        .then(function(r) { return r.json(); })
+    adminFetch('/api/admin/announcements/' + id)
         .then(function(a) {
             document.getElementById('annModal').classList.add('active');
             document.getElementById('annModalTitle').textContent = 'Edit Announcement';
@@ -160,7 +159,12 @@ function editAnn(id) {
             if (a.startAt) document.getElementById('annStartAt').value = a.startAt.substring(0, 16);
             if (a.endAt) document.getElementById('annEndAt').value = a.endAt.substring(0, 16);
         })
-        .catch(function() { showToast('Error loading announcement', 'error'); });
+        .catch(function(err) {
+            var msg = (err && err.status === 403) ? 'Insufficient permission' :
+                      (err && err.status === 404) ? 'Announcement not found' :
+                      (err && err.message) || 'Error loading announcement';
+            showToast(msg, 'error');
+        });
 }
 
 function saveAnn(e) {
