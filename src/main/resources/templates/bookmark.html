@@ -84,7 +84,7 @@
                 <span style="margin-left:auto;display:flex;gap:6px;">
                     <button th:if="${currentUser == bookmark.ownerUsername}" class="btn btn-sm btn-primary" onclick="openEditModal(bookmarkId)">Edit</button>
                     <button th:if="${currentUser == bookmark.ownerUsername}" class="btn btn-sm btn-danger" onclick="deleteBookmark(bookmarkId)">Delete</button>
-                    <button class="btn btn-sm btn-outline" onclick="reportContent('POST', bookmarkId)">Report</button>
+                    <button th:unless="${isGuest}" class="btn btn-sm btn-outline" onclick="reportContent('POST', bookmarkId)">Report</button>
                 </span>
             </div>
         </div>
@@ -93,8 +93,8 @@
         <div class="comment-section" style="margin-top: 32px;">
             <h3 style="margin-bottom: 16px;">Comments</h3>
 
-            <!-- New Comment Form -->
-            <div class="comment-form" style="margin-bottom: 24px;">
+            <!-- New Comment Form (hidden for guests) -->
+            <div th:unless="${isGuest}" class="comment-form" style="margin-bottom: 24px;">
                 <textarea id="newCommentContent" class="form-control" placeholder="Write a comment..." rows="3"></textarea>
                 <div style="margin-top: 8px; text-align: right;">
                     <button class="btn btn-primary" onclick="submitComment()">Post Comment</button>

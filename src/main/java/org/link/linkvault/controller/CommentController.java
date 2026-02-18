@@ -31,7 +31,7 @@ public class CommentController {
     public ResponseEntity<List<CommentResponseDto>> getComments(
             @PathVariable Long bookmarkId,
             @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.getUserEntity(userDetails.getUsername());
+        User user = userDetails != null ? userService.getUserEntity(userDetails.getUsername()) : null;
         return ResponseEntity.ok(commentService.getCommentsForBookmark(bookmarkId, user));
     }
 

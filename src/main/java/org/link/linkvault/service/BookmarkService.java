@@ -302,6 +302,18 @@ public class BookmarkService {
 
     @Transactional
     public BookmarkResponseDto recordAccess(Long id, User currentUser) {
+        Bookmark bookmark = findByIdWithAccessControl(id, currentUser);
+        bookmark.recordAccess();
+        return BookmarkResponseDto.from(bookmark);
+    }
+
+    @Transactional(readOnly = true)
+    public BookmarkResponseDto findByIdForUser(Long id, User currentUser) {
+        Bookmark bookmark = findByIdWithAccessControl(id, currentUser);
+        return BookmarkResponseDto.from(bookmark);
+    }
+
+    private Bookmark findByIdWithAccessControl(Long id, User currentUser) {
         Bookmark bookmark = bookmarkRepository.findWithTagsAndFolderById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
 
@@ -313,9 +325,7 @@ public class BookmarkService {
                 throw new SecurityException("Access denied");
             }
         }
-
-        bookmark.recordAccess();
-        return BookmarkResponseDto.from(bookmark);
+        return bookmark;
     }
 
     public List<BookmarkResponseDto> findFrequentlyAccessed(User currentUser, int limit) {

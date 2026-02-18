@@ -23,4 +23,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     void deleteByRecipientId(Long recipientId);
 
     void deleteBySourceUserId(Long sourceUserId);
+
+    boolean existsBySourceUserIdAndRecipientIdAndTypeAndRelatedCommentId(
+            Long sourceUserId, Long recipientId, org.link.linkvault.entity.NotificationType type, Long relatedCommentId);
 }

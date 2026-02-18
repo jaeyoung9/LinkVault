@@ -5,7 +5,8 @@
 ##   mkcert -install
 ##   mkcert -pkcs12 localhost 127.0.0.1 ::1
 ##   mv localhost+2.p12 src/main/resources/dev-cert.p12
-##
+##   Edit Run Configuration (top toolbar dropdown → Edit Configurations)
+##   VM Option -Dspring.profiles.active=dev-ssl
 ## In production, TLS terminates at the load balancer — do NOT use this profile.
 
 server:

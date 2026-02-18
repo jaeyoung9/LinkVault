@@ -92,6 +92,12 @@ public class NotificationService {
     public void notifyVote(Comment comment, User voter) {
         if (comment.isDeleted()) return;
         User author = comment.getUser();
+        if (author.getId().equals(voter.getId())) return;
+        // Deduplicate: skip if a vote notification already exists for this voter+comment
+        if (notificationRepository.existsBySourceUserIdAndRecipientIdAndTypeAndRelatedCommentId(
+                voter.getId(), author.getId(), NotificationType.VOTE, comment.getId())) {
+            return;
+        }
         String message = voter.getUsername() + " liked your comment";
         createNotification(author, voter, NotificationType.VOTE, message,
                 comment.getBookmark().getId(), comment.getId());

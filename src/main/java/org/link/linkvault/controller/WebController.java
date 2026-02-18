@@ -186,7 +186,7 @@ public class WebController {
     @GetMapping("/bookmark/{id}")
     public String bookmarkDetail(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long id, Model model) {
+            @PathVariable Long id, Model model, HttpServletRequest request) {
         if (userDetails == null) {
             if (!isGuestAccessEnabled()) return "redirect:/login";
             BookmarkResponseDto bookmark = bookmarkService.findByIdPublic(id);
@@ -198,7 +198,20 @@ public class WebController {
         }
 
         User currentUser = userService.getUserEntity(userDetails.getUsername());
-        BookmarkResponseDto bookmark = bookmarkService.recordAccess(id, currentUser);
+
+        // Deduplicate view count: only record access once per session per bookmark
+        @SuppressWarnings("unchecked")
+        java.util.Set<Long> viewedPosts = (java.util.Set<Long>) request.getSession().getAttribute("viewedPosts");
+        if (viewedPosts == null) {
+            viewedPosts = new java.util.HashSet<>();
+            request.getSession().setAttribute("viewedPosts", viewedPosts);
+        }
+        BookmarkResponseDto bookmark;
+        if (viewedPosts.add(id)) {
+            bookmark = bookmarkService.recordAccess(id, currentUser);
+        } else {
+            bookmark = bookmarkService.findByIdForUser(id, currentUser);
+        }
 
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmark", bookmark);

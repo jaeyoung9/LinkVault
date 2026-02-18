@@ -15,7 +15,7 @@
     <div class="main-content" style="padding: 0; position: relative;">
         <div class="header-bar" style="padding: 16px 24px; margin-bottom: 0;">
             <h2 th:text="${pageTitle}">Map Discover</h2>
-            <button class="btn btn-primary" onclick="openAddModal()">+ Share a Story</button>
+            <button th:unless="${isGuest}" class="btn btn-primary" onclick="openAddModal()">+ Share a Story</button>
         </div>
 
         <!-- Search Wrapper -->
