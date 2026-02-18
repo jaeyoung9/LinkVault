@@ -57,6 +57,24 @@
         }
     }
 
+    // Emit guest event helper
+    function emitGuestEvent(eventType, extra) {
+        if (document.body.getAttribute('data-guest') !== 'true') return;
+        var payload = {
+            sessionId: getSessionId(),
+            eventType: eventType,
+            pageUrl: window.location.pathname
+        };
+        if (extra) {
+            for (var k in extra) { payload[k] = extra[k]; }
+        }
+        fetch('/api/guest/event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(function() {});
+    }
+
     // Detect ad-blocker
     function detectAdBlocker() {
         setTimeout(function() {
@@ -68,6 +86,8 @@
                         notice.style.display = 'block';
                         slot.style.display = 'none';
                     }
+                } else {
+                    emitGuestEvent('AD_SHOWN');
                 }
             });
         }, 2000);
@@ -150,6 +170,8 @@
                 sessionId: getSessionId()
             })
         }).catch(function() {});
+
+        emitGuestEvent('AD_HIDDEN');
 
         // Remove the ad card visually
         adCard.style.opacity = '0';

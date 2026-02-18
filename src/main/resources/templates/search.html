@@ -23,9 +23,9 @@
         <p style="color: var(--text-muted); margin-bottom: 16px;"
            th:text="${bookmarks.totalElements} + ' results found'">0 results</p>
 
-        <div class="bookmark-grid" th:if="${bookmarks.totalElements > 0}">
+        <div class="post-grid" th:if="${bookmarks.totalElements > 0}">
             <th:block th:each="bookmark : ${bookmarks.content}">
-                <div th:replace="~{fragments/layout :: bookmarkCard(${bookmark})}"></div>
+                <div th:replace="~{fragments/layout :: postCard(${bookmark})}"></div>
             </th:block>
         </div>
         <div class="empty-state" th:if="${bookmarks.totalElements == 0}">

@@ -216,7 +216,7 @@
         <img th:if="${bookmark.favicon != null and !bookmark.favicon.isEmpty()}"
              th:src="${bookmark.favicon}" class="bookmark-favicon" alt=""
              onerror="this.style.display='none'"/>
-        <a href="javascript:void(0)" class="bookmark-title js-access-link"
+        <a th:href="@{'/bookmark/' + ${bookmark.id}}" class="bookmark-title js-access-link"
            th:data-id="${bookmark.id}" th:data-url="${bookmark.url}"
            th:text="${bookmark.title}">Title</a>
         <div class="bookmark-card-actions">

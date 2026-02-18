@@ -10,6 +10,8 @@ public interface SystemSettingsRepository extends JpaRepository<SystemSettings, 
 
     Optional<SystemSettings> findBySettingKey(String settingKey);
 
+    boolean existsBySettingKey(String settingKey);
+
     List<SystemSettings> findByCategoryOrderBySettingKeyAsc(String category);
 
     List<SystemSettings> findAllByOrderByCategoryAscSettingKeyAsc();

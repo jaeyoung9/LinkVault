@@ -489,69 +489,35 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Default privacy policy v1 created (admin auto-consented)");
     }
 
-    private void initSystemSettings() {
-        if (systemSettingsRepository.count() > 0) {
-            return;
+    private void ensureSetting(String key, String value, String description, String category) {
+        if (!systemSettingsRepository.existsBySettingKey(key)) {
+            systemSettingsRepository.save(SystemSettings.builder()
+                    .settingKey(key).settingValue(value)
+                    .description(description).category(category).build());
         }
+    }
 
+    private void initSystemSettings() {
         log.info("Initializing system settings...");
 
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("file-vault.upload-path")
-                .settingValue("./uploads/photos")
-                .description("File upload directory path")
-                .category("FILE_STORAGE")
-                .build());
-
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("file-vault.allowed-types")
-                .settingValue("image/jpeg,image/png,image/gif,image/webp")
-                .description("Comma-separated list of allowed MIME types")
-                .category("FILE_STORAGE")
-                .build());
-
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("file-vault.max-file-size-mb")
-                .settingValue("10")
-                .description("Maximum file upload size in megabytes")
-                .category("FILE_STORAGE")
-                .build());
-
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("report.auto-disable-threshold")
-                .settingValue("5")
-                .description("Number of actioned reports before user account is auto-disabled")
-                .category("MODERATION")
-                .build());
+        ensureSetting("file-vault.upload-path", "./uploads/photos",
+                "File upload directory path", "FILE_STORAGE");
+        ensureSetting("file-vault.allowed-types", "image/jpeg,image/png,image/gif,image/webp",
+                "Comma-separated list of allowed MIME types", "FILE_STORAGE");
+        ensureSetting("file-vault.max-file-size-mb", "10",
+                "Maximum file upload size in megabytes", "FILE_STORAGE");
+        ensureSetting("report.auto-disable-threshold", "5",
+                "Number of actioned reports before user account is auto-disabled", "MODERATION");
 
         // Audit policy settings
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("audit.retention.enabled")
-                .settingValue("false")
-                .description("Enable automatic audit log retention cleanup")
-                .category("AUDIT_POLICY")
-                .build());
-
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("audit.retention.days")
-                .settingValue("365")
-                .description("Days to retain audit log entries (30-3650)")
-                .category("AUDIT_POLICY")
-                .build());
-
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("audit.delete.mode")
-                .settingValue("SOFT")
-                .description("Retention delete mode: SOFT (archive) or HARD (permanent)")
-                .category("AUDIT_POLICY")
-                .build());
-
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("audit.masking.level")
-                .settingValue("BASIC")
-                .description("Audit detail masking level: NONE, BASIC, or STRICT")
-                .category("AUDIT_POLICY")
-                .build());
+        ensureSetting("audit.retention.enabled", "false",
+                "Enable automatic audit log retention cleanup", "AUDIT_POLICY");
+        ensureSetting("audit.retention.days", "365",
+                "Days to retain audit log entries (30-3650)", "AUDIT_POLICY");
+        ensureSetting("audit.delete.mode", "SOFT",
+                "Retention delete mode: SOFT (archive) or HARD (permanent)", "AUDIT_POLICY");
+        ensureSetting("audit.masking.level", "BASIC",
+                "Audit detail masking level: NONE, BASIC, or STRICT", "AUDIT_POLICY");
 
         log.info("System settings initialized with defaults");
 
@@ -563,92 +529,66 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing monetization settings...");
 
         // Feature flags (all OFF by default)
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("feature.guest-access-enabled").settingValue("true")
-                .description("Enable anonymous guest read access").category("FEATURE_FLAGS").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("feature.ads-enabled").settingValue("false")
-                .description("Enable ad display globally").category("FEATURE_FLAGS").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("feature.rewarded-video-enabled").settingValue("false")
-                .description("Enable rewarded video system").category("FEATURE_FLAGS").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("feature.donations-enabled").settingValue("false")
-                .description("Enable donation section").category("FEATURE_FLAGS").build());
+        ensureSetting("feature.guest-access-enabled", "true",
+                "Enable anonymous guest read access", "FEATURE_FLAGS");
+        ensureSetting("feature.ads-enabled", "false",
+                "Enable ad display globally", "FEATURE_FLAGS");
+        ensureSetting("feature.rewarded-video-enabled", "false",
+                "Enable rewarded video system", "FEATURE_FLAGS");
+        ensureSetting("feature.donations-enabled", "false",
+                "Enable donation section", "FEATURE_FLAGS");
 
         // Ad policy
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.max-per-page").settingValue("3")
-                .description("Max ad cards per page load").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.max-per-session").settingValue("10")
-                .description("Max ads per session").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.max-per-hour").settingValue("15")
-                .description("Max ads per hour").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.feed-insertion-interval").settingValue("6")
-                .description("Insert 1 ad every N posts").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.guest-frequency-multiplier").settingValue("1.5")
-                .description("Guest ad frequency multiplier vs members").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.guest-first-session-grace").settingValue("3")
-                .description("Page views before first guest ad").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.adsense-client-id").settingValue("")
-                .description("Google AdSense client ID (ca-pub-xxx)").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.adsense-slot-feed").settingValue("")
-                .description("AdSense slot ID for feed native ads (1234567890)").category("AD_POLICY").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("ad.adsense-layout-key").settingValue("")
-                .description("AdSense in-feed ad layout key (e.g. -ef+6k-30-ac+ty)").category("AD_POLICY").build());
+        ensureSetting("ad.max-per-page", "3",
+                "Max ad cards per page load", "AD_POLICY");
+        ensureSetting("ad.max-per-session", "10",
+                "Max ads per session", "AD_POLICY");
+        ensureSetting("ad.max-per-hour", "15",
+                "Max ads per hour", "AD_POLICY");
+        ensureSetting("ad.feed-insertion-interval", "6",
+                "Insert 1 ad every N posts", "AD_POLICY");
+        ensureSetting("ad.guest-frequency-multiplier", "1.5",
+                "Guest ad frequency multiplier vs members", "AD_POLICY");
+        ensureSetting("ad.guest-first-session-grace", "3",
+                "Page views before first guest ad", "AD_POLICY");
+        ensureSetting("ad.adsense-client-id", "",
+                "Google AdSense client ID (ca-pub-xxx)", "AD_POLICY");
+        ensureSetting("ad.adsense-slot-feed", "",
+                "AdSense slot ID for feed native ads (1234567890)", "AD_POLICY");
+        ensureSetting("ad.adsense-layout-key", "",
+                "AdSense in-feed ad layout key (e.g. -ef+6k-30-ac+ty)", "AD_POLICY");
 
         // Reward settings
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("reward.video-points").settingValue("10")
-                .description("Points per rewarded video").category("REWARD").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("reward.adfree-hours-cost").settingValue("50")
-                .description("Points to redeem ad-free hours").category("REWARD").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("reward.adfree-hours-duration").settingValue("2")
-                .description("Hours per redemption").category("REWARD").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("reward.daily-video-cap").settingValue("5")
-                .description("Max videos per day").category("REWARD").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("reward.ima-ad-tag-url").settingValue("https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=")
-                .description("IMA SDK ad tag URL").category("REWARD").build());
+        ensureSetting("reward.video-points", "10",
+                "Points per rewarded video", "REWARD");
+        ensureSetting("reward.adfree-hours-cost", "50",
+                "Points to redeem ad-free hours", "REWARD");
+        ensureSetting("reward.adfree-hours-duration", "2",
+                "Hours per redemption", "REWARD");
+        ensureSetting("reward.daily-video-cap", "5",
+                "Max videos per day", "REWARD");
+        ensureSetting("reward.ima-ad-tag-url", "https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=",
+                "IMA SDK ad tag URL", "REWARD");
 
         // Stripe settings
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("stripe.api-key-publishable").settingValue("")
-                .description("Stripe publishable key (pk_test_...)").category("STRIPE").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("stripe.api-key-secret").settingValue("")
-                .description("Stripe secret key (sk_test_...)").category("STRIPE").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("stripe.webhook-secret").settingValue("")
-                .description("Stripe webhook signing secret (whsec_...)").category("STRIPE").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("stripe.adfree-7d-price-id").settingValue("")
-                .description("Stripe Price ID for 7-day ad-free pass").category("STRIPE").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("stripe.adfree-30d-price-id").settingValue("")
-                .description("Stripe Price ID for 30-day ad-free pass").category("STRIPE").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("stripe.currency").settingValue("usd")
-                .description("Default currency for Stripe payments").category("STRIPE").build());
+        ensureSetting("stripe.api-key-publishable", "",
+                "Stripe publishable key (pk_test_...)", "STRIPE");
+        ensureSetting("stripe.api-key-secret", "",
+                "Stripe secret key (sk_test_...)", "STRIPE");
+        ensureSetting("stripe.webhook-secret", "",
+                "Stripe webhook signing secret (whsec_...)", "STRIPE");
+        ensureSetting("stripe.adfree-7d-price-id", "",
+                "Stripe Price ID for 7-day ad-free pass", "STRIPE");
+        ensureSetting("stripe.adfree-30d-price-id", "",
+                "Stripe Price ID for 30-day ad-free pass", "STRIPE");
+        ensureSetting("stripe.currency", "usd",
+                "Default currency for Stripe payments", "STRIPE");
 
         // Donation settings
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("donation.one-time-amounts").settingValue("5,10,25,50")
-                .description("Suggested one-time donation amounts (USD)").category("DONATION").build());
-        systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("donation.recurring-amounts").settingValue("3,5,10")
-                .description("Suggested monthly recurring amounts (USD)").category("DONATION").build());
+        ensureSetting("donation.one-time-amounts", "5,10,25,50",
+                "Suggested one-time donation amounts (USD)", "DONATION");
+        ensureSetting("donation.recurring-amounts", "3,5,10",
+                "Suggested monthly recurring amounts (USD)", "DONATION");
 
         log.info("Monetization settings initialized (all feature flags OFF)");
     }

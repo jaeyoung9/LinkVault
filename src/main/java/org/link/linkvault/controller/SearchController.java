@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,12 +38,22 @@ public class SearchController {
     public ResponseEntity<Map<String, Object>> search(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam String q) {
-        User user = userService.getUserEntity(userDetails.getUsername());
+        List<BookmarkResponseDto> bookmarks;
+        List<TagResponseDto> tags;
+        List<FolderResponseDto> folders;
 
-        List<BookmarkResponseDto> bookmarks = bookmarkService.searchByKeyword(user, q,
-                PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
-        List<TagResponseDto> tags = tagService.searchByName(q);
-        List<FolderResponseDto> folders = folderService.searchByName(user, q);
+        if (userDetails == null) {
+            bookmarks = bookmarkService.searchByKeywordPublic(q,
+                    PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+            tags = tagService.searchByName(q);
+            folders = Collections.emptyList();
+        } else {
+            User user = userService.getUserEntity(userDetails.getUsername());
+            bookmarks = bookmarkService.searchByKeyword(user, q,
+                    PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+            tags = tagService.searchByName(q);
+            folders = folderService.searchByName(user, q);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("bookmarks", bookmarks);

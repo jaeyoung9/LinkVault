@@ -58,6 +58,22 @@
 </div>
 
 <script>
+// Emit guest signup funnel event
+(function() {
+    var guestSessionId = sessionStorage.getItem('lv_ad_session');
+    if (guestSessionId) {
+        fetch('/api/guest/event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId: guestSessionId,
+                eventType: 'SIGNUP_STARTED',
+                pageUrl: '/register'
+            })
+        }).catch(function() {});
+    }
+})();
+
 // Real-time code validation on blur
 document.getElementById('invCode').addEventListener('blur', function() {
     var code = this.value.trim();
@@ -119,6 +135,19 @@ function handleRegister(event) {
     .then(function(result) {
         successEl.textContent = result.message || 'Registration successful!';
         successEl.style.display = '';
+        // Emit SIGNUP_COMPLETED guest event
+        var guestSessionId = sessionStorage.getItem('lv_ad_session');
+        if (guestSessionId) {
+            fetch('/api/guest/event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId: guestSessionId,
+                    eventType: 'SIGNUP_COMPLETED',
+                    pageUrl: '/register'
+                })
+            }).catch(function() {});
+        }
         setTimeout(function() { window.location.href = '/login'; }, 2000);
     })
     .catch(function(err) {

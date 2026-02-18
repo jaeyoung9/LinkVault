@@ -5,6 +5,7 @@ import org.link.linkvault.dto.SystemStatsDto;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.service.*;
 import org.link.linkvault.service.ReportService;
+import org.springframework.core.env.Environment;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +37,7 @@ public class AdminWebController {
     private final MonetizationStatsService monetizationStatsService;
     private final GuestEventService guestEventService;
     private final TransparencyReportService transparencyReportService;
+    private final Environment env;
 
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_STATS')")
@@ -157,7 +159,8 @@ public class AdminWebController {
 
     @GetMapping("/settings")
     @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
-    public String settings() {
+    public String settings(Model model) {
+        model.addAttribute("dbInfo", env.getProperty("spring.datasource.url", "unknown"));
         return "admin/settings";
     }
 

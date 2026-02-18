@@ -319,7 +319,7 @@ public class BookmarkService {
     }
 
     public List<BookmarkResponseDto> findFrequentlyAccessed(User currentUser, int limit) {
-        return bookmarkRepository.findTopByAccessCount(PageRequest.of(0, limit)).stream()
+        return bookmarkRepository.findTopByAccessCountAndUserId(currentUser.getId(), PageRequest.of(0, limit)).stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }
@@ -344,13 +344,13 @@ public class BookmarkService {
     }
 
     public List<BookmarkResponseDto> findByFolderId(User currentUser, Long folderId) {
-        return bookmarkRepository.findByFolderIdWithTags(folderId).stream()
+        return bookmarkRepository.findByUserIdAndFolderId(currentUser.getId(), folderId).stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }
 
     public List<BookmarkResponseDto> findUncategorized(User currentUser) {
-        return bookmarkRepository.findByFolderIsNullWithTags().stream()
+        return bookmarkRepository.findByUserIdAndFolderIsNull(currentUser.getId()).stream()
                 .map(BookmarkResponseDto::from)
                 .collect(Collectors.toList());
     }

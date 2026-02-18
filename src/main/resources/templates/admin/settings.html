@@ -17,7 +17,8 @@
         </div>
 
         <div class="alert" style="background:var(--surface-hover);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:20px;color:var(--text-muted);font-size:0.85rem;">
-            Note: Settings are stored in H2 in-memory database and will reset to defaults on server restart.
+            <span th:if="${dbInfo != null and #strings.contains(dbInfo, 'h2:mem')}">Note: Settings are stored in H2 in-memory database and will reset to defaults on server restart.</span>
+            <span th:unless="${dbInfo != null and #strings.contains(dbInfo, 'h2:mem')}">Settings are persisted in the configured database.</span>
         </div>
 
         <div id="settingsContainer">

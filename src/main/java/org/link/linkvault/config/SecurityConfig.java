@@ -49,6 +49,8 @@ public class SecurityConfig {
                         "/qna", "/qna/**", "/announcements", "/announcements/**",
                         "/transparency", "/transparency/**",
                         "/policies/**").permitAll()
+                // Guest search API
+                .antMatchers(HttpMethod.GET, "/api/search").permitAll()
                 // Guest event tracking + ad feedback
                 .antMatchers(HttpMethod.POST, "/api/guest/event").permitAll()
                 .antMatchers(HttpMethod.POST, "/api/ad/hide").permitAll()

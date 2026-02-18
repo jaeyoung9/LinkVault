@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import org.link.linkvault.entity.Role;
 
+import javax.servlet.http.HttpServletRequest;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -91,14 +93,15 @@ public class WebController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            Model model) {
+            Model model,
+            HttpServletRequest request) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         if (userDetails == null) {
             if (!isGuestAccessEnabled()) return "redirect:/login";
             Page<BookmarkResponseDto> bookmarks = bookmarkService.findAllPublic(pageable);
             populateGuestModel(model);
-            populateAdModel(model, null, bookmarks.getNumberOfElements());
+            populateAdModel(model, null, bookmarks.getNumberOfElements(), request);
             model.addAttribute("bookmarks", bookmarks);
             model.addAttribute("pageTitle", "Feed");
             model.addAttribute("frequent", Collections.emptyList());
@@ -108,7 +111,7 @@ public class WebController {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         Page<BookmarkResponseDto> bookmarks = bookmarkService.findAll(currentUser, pageable);
         populateCommonModel(model, currentUser);
-        populateAdModel(model, currentUser, bookmarks.getNumberOfElements());
+        populateAdModel(model, currentUser, bookmarks.getNumberOfElements(), request);
         model.addAttribute("bookmarks", bookmarks);
         model.addAttribute("pageTitle", "Feed");
         model.addAttribute("frequent", bookmarkService.findFrequentlyAccessed(currentUser, 5));
@@ -367,7 +370,7 @@ public class WebController {
         return amounts;
     }
 
-    private void populateAdModel(Model model, User currentUser, int totalPosts) {
+    private void populateAdModel(Model model, User currentUser, int totalPosts, HttpServletRequest request) {
         boolean adsEnabled = adPolicyService.isAdsEnabled();
         boolean isAdFree = currentUser != null && adPolicyService.isAdFree(currentUser);
         boolean isGuest = currentUser == null;
@@ -377,7 +380,15 @@ public class WebController {
         model.addAttribute("adsenseSlotFeed", adPolicyService.getAdsenseSlotFeed());
         model.addAttribute("adsenseLayoutKey", adPolicyService.getAdsenseLayoutKey());
         if (adsEnabled && !isAdFree) {
-            model.addAttribute("adPositions", adPolicyService.getAdInsertionPositions(totalPosts, isGuest, 0));
+            int sessionPageViews = 0;
+            if (isGuest && request != null) {
+                Integer pageViews = (Integer) request.getSession().getAttribute("guestPageViews");
+                if (pageViews == null) pageViews = 0;
+                pageViews++;
+                request.getSession().setAttribute("guestPageViews", pageViews);
+                sessionPageViews = pageViews;
+            }
+            model.addAttribute("adPositions", adPolicyService.getAdInsertionPositions(totalPosts, isGuest, sessionPageViews));
         } else {
             model.addAttribute("adPositions", Collections.emptyList());
         }
