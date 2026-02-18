@@ -2246,6 +2246,7 @@ select.form-control { cursor: pointer; }
 /* ===== Guest Banner ===== */
 .guest-banner {
     background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    /* background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary); */
     border-radius: var(--radius);
     padding: 16px 20px;
     margin-bottom: 16px;

@@ -102,10 +102,13 @@
     </div>
 
     <div class="sidebar-section" style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px;">
+        <!-- Guest: minimal navigation -->
+        <th:block th:if="${currentUser != null}">
         <a href="/qna" class="sidebar-link">
             <span class="sidebar-link-text">QnA Guide</span>
             <span class="sidebar-badge-dot" th:if="${qnaHasRecentUpdate}"></span>
         </a>
+        </th:block>
         <a href="/announcements" class="sidebar-link" style="position: relative;">
             <span class="sidebar-link-text">Announcements</span>
             <span class="sidebar-announcement-badge" th:if="${unreadAnnouncementCount != null and unreadAnnouncementCount > 0}"

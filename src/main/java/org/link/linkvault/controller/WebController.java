@@ -195,7 +195,7 @@ public class WebController {
         }
 
         User currentUser = userService.getUserEntity(userDetails.getUsername());
-        BookmarkResponseDto bookmark = bookmarkService.findById(id, currentUser);
+        BookmarkResponseDto bookmark = bookmarkService.recordAccess(id, currentUser);
 
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmark", bookmark);
