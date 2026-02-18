@@ -25,6 +25,7 @@ public class InvitationService {
 
     private final InvitationCodeRepository invitationCodeRepository;
     private final InvitationUseRepository invitationUseRepository;
+    private final AuditLogService auditLogService;
 
     public List<InvitationCodeResponseDto> findAll() {
         return invitationCodeRepository.findAllWithCreator().stream()
@@ -33,7 +34,7 @@ public class InvitationService {
     }
 
     @Transactional
-    public InvitationCodeResponseDto create(InvitationCodeRequestDto dto, User createdBy) {
+    public InvitationCodeResponseDto create(InvitationCodeRequestDto dto, User createdBy, String actorUsername) {
         String code = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         LocalDateTime expiresAt = null;
@@ -52,6 +53,8 @@ public class InvitationService {
                 .build();
 
         invitation = invitationCodeRepository.save(invitation);
+        auditLogService.log(actorUsername, AuditActionCodes.INVITATION_CREATE, "Invitation", invitation.getId(),
+                AuditDetailFormatter.format("role", String.valueOf(dto.getAssignedRole()), "maxUses", String.valueOf(dto.getMaxUses())));
         return InvitationCodeResponseDto.from(invitation);
     }
 
@@ -82,16 +85,18 @@ public class InvitationService {
     }
 
     @Transactional
-    public void toggleActive(Long id) {
+    public void toggleActive(Long id, String actorUsername) {
         InvitationCode invitation = invitationCodeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation code not found: " + id));
         invitation.setActive(!invitation.isActive());
+        auditLogService.log(actorUsername, AuditActionCodes.INVITATION_TOGGLE, "Invitation", id, null);
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actorUsername) {
         InvitationCode invitation = invitationCodeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation code not found: " + id));
         invitationCodeRepository.delete(invitation);
+        auditLogService.log(actorUsername, AuditActionCodes.INVITATION_DELETE, "Invitation", id, null);
     }
 }

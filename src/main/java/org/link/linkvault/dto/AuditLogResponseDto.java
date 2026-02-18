@@ -12,6 +12,7 @@ public class AuditLogResponseDto {
 
     private Long id;
     private String username;
+    private String actorLabel;
     private String action;
     private String entityType;
     private Long entityId;
@@ -19,9 +20,13 @@ public class AuditLogResponseDto {
     private LocalDateTime timestamp;
 
     public static AuditLogResponseDto from(AuditLog log) {
+        String username = log.getUser() != null ? log.getUser().getUsername() : null;
+        String actorLabel = username != null ? username :
+                (log.getActorUsername() != null ? log.getActorUsername() + " (deleted)" : "system");
         return AuditLogResponseDto.builder()
                 .id(log.getId())
-                .username(log.getUser() != null ? log.getUser().getUsername() : null)
+                .username(username)
+                .actorLabel(actorLabel)
                 .action(log.getAction())
                 .entityType(log.getEntityType())
                 .entityId(log.getEntityId())

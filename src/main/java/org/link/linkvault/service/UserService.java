@@ -38,6 +38,7 @@ public class UserService {
     private final QnaArticleRepository qnaArticleRepository;
     private final InvitationCodeRepository invitationCodeRepository;
     private final PrivacyPolicyRepository privacyPolicyRepository;
+    private final AuditLogService auditLogService;
 
     public List<UserResponseDto> findAll() {
         return userRepository.findAll().stream()
@@ -57,7 +58,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDto create(UserRequestDto dto) {
+    public UserResponseDto create(UserRequestDto dto, String actorUsername) {
         if (userRepository.existsByUsername(dto.getUsername())) {
             throw new IllegalArgumentException("Username already exists: " + dto.getUsername());
         }
@@ -74,11 +75,13 @@ public class UserService {
                 .build();
 
         user = userRepository.save(user);
+        auditLogService.log(actorUsername, AuditActionCodes.USER_CREATE, "User", user.getId(),
+                AuditDetailFormatter.format("username", dto.getUsername(), "role", String.valueOf(dto.getRole())));
         return UserResponseDto.from(user, 0);
     }
 
     @Transactional
-    public UserResponseDto update(Long id, UserRequestDto dto) {
+    public UserResponseDto update(Long id, UserRequestDto dto, String actorUsername) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
@@ -101,6 +104,8 @@ public class UserService {
             user.setEnabled(dto.getEnabled());
         }
 
+        auditLogService.log(actorUsername, AuditActionCodes.USER_UPDATE, "User", id,
+                AuditDetailFormatter.format("role", String.valueOf(dto.getRole())));
         return UserResponseDto.from(user, userRepository.countBookmarksByUserId(user.getId()));
     }
 
@@ -153,8 +158,8 @@ public class UserService {
         notificationRepository.deleteByRecipientId(userId);
         notificationRepository.deleteBySourceUserId(userId);
 
-        // 6. Delete audit logs
-        auditLogRepository.deleteByUserId(userId);
+        // 6. Nullify audit log user references (retain logs for audit trail)
+        auditLogRepository.nullifyUserReferences(userId);
 
         // 7. Delete announcement reads
         announcementReadRepository.deleteByUserId(userId);
@@ -195,6 +200,8 @@ public class UserService {
 
         // 15. Delete user
         userRepository.delete(user);
+
+        auditLogService.log(actorUsername, AuditActionCodes.USER_DELETE, "User", userId, null);
     }
 
     @Transactional
@@ -212,6 +219,8 @@ public class UserService {
         }
 
         user.setEnabled(!user.isEnabled());
+        auditLogService.log(actorUsername, AuditActionCodes.USER_TOGGLE, "User", id,
+                AuditDetailFormatter.format("enabled", String.valueOf(user.isEnabled())));
         return UserResponseDto.from(user, userRepository.countBookmarksByUserId(user.getId()));
     }
 
@@ -221,7 +230,7 @@ public class UserService {
     }
 
     @Transactional
-    public int bulkDeactivateNonConsented(String reason) {
+    public int bulkDeactivateNonConsented(String reason, String actorUsername) {
         PrivacyPolicy activePolicy = privacyPolicyRepository.findByActiveTrue().orElse(null);
         if (activePolicy == null) {
             return 0;
@@ -236,6 +245,8 @@ public class UserService {
             user.deactivateForPrivacy(reason + " (policy v" + activePolicy.getVersion() + ")");
         }
         userRepository.saveAll(nonConsentedUsers);
+        auditLogService.log(actorUsername, AuditActionCodes.USER_BULK_DEACTIVATE, "User", null,
+                AuditDetailFormatter.format("deactivated", String.valueOf(nonConsentedUsers.size())));
         return nonConsentedUsers.size();
     }
 }

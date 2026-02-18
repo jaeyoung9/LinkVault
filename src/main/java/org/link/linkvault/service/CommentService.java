@@ -26,6 +26,7 @@ public class CommentService {
     private final CommentVoteRepository commentVoteRepository;
     private final BookmarkRepository bookmarkRepository;
     private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
 
     public List<CommentResponseDto> getCommentsForBookmark(Long bookmarkId, User currentUser) {
         List<Comment> allComments = commentRepository.findAllByBookmarkId(bookmarkId);
@@ -173,6 +174,12 @@ public class CommentService {
 
         comment.softDelete();
         comment.getBookmark().decrementCommentCount();
+
+        if (isModerator) {
+            auditLogService.log(user.getUsername(), AuditActionCodes.COMMENT_SOFT_DELETE, "Comment", commentId,
+                    AuditDetailFormatter.format("bookmarkId", String.valueOf(comment.getBookmark().getId()),
+                            "owner", comment.getUser().getUsername(), "moderatorAction", "true"));
+        }
     }
 
     @Transactional
@@ -229,7 +236,7 @@ public class CommentService {
     }
 
     @Transactional
-    public void restoreComment(Long commentId) {
+    public void restoreComment(Long commentId, String actorUsername) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
         if (!comment.isDeleted()) {
@@ -237,15 +244,31 @@ public class CommentService {
         }
         comment.restore();
         comment.getBookmark().incrementCommentCount();
+
+        auditLogService.log(actorUsername, AuditActionCodes.COMMENT_RESTORE, "Comment", commentId,
+                AuditDetailFormatter.format("bookmarkId", String.valueOf(comment.getBookmark().getId()),
+                        "owner", comment.getUser().getUsername()));
     }
 
     @Transactional
-    public void purgeComment(Long commentId) {
+    public void purgeComment(Long commentId, String actorUsername) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
         if (!comment.isDeleted()) {
             throw new IllegalStateException("Cannot purge a comment that is not soft-deleted");
         }
+
+        // 1. Delete votes on this comment
+        commentVoteRepository.deleteByCommentId(commentId);
+
+        // 2. Detach child comments (preserve thread, set parent to null)
+        commentRepository.detachRepliesFromComment(commentId);
+
+        // 3. Delete the comment
         commentRepository.delete(comment);
+
+        auditLogService.log(actorUsername, AuditActionCodes.COMMENT_PURGE, "Comment", commentId,
+                AuditDetailFormatter.format("bookmarkId", String.valueOf(comment.getBookmark().getId()),
+                        "owner", comment.getUser().getUsername()));
     }
 }

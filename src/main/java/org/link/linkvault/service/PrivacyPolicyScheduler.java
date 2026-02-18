@@ -32,7 +32,7 @@ public class PrivacyPolicyScheduler {
         }
 
         int count = userService.bulkDeactivateNonConsented(
-                "Auto-deactivated: did not consent to privacy policy");
+                "Auto-deactivated: did not consent to privacy policy", "SYSTEM");
         if (count > 0) {
             log.info("Auto-deactivated {} user(s) who did not consent to privacy policy v{}",
                     count, activePolicy.getVersion());

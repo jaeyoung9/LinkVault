@@ -28,6 +28,7 @@ public class QnaArticleService {
 
     private final QnaArticleRepository qnaArticleRepository;
     private final QnaFeedbackRepository qnaFeedbackRepository;
+    private final AuditLogService auditLogService;
 
     public List<QnaArticleResponseDto> findAllPublished() {
         return qnaArticleRepository.findAllPublished().stream()
@@ -64,7 +65,7 @@ public class QnaArticleService {
     }
 
     @Transactional
-    public QnaArticleResponseDto create(QnaArticleRequestDto dto, User creator) {
+    public QnaArticleResponseDto create(QnaArticleRequestDto dto, User creator, String actorUsername) {
         QnaArticle article = QnaArticle.builder()
                 .question(dto.getQuestion())
                 .answer(dto.getAnswer())
@@ -75,11 +76,14 @@ public class QnaArticleService {
                 .relatedLinks(dto.getRelatedLinks())
                 .createdBy(creator)
                 .build();
-        return QnaArticleResponseDto.from(qnaArticleRepository.save(article));
+        QnaArticleResponseDto result = QnaArticleResponseDto.from(qnaArticleRepository.save(article));
+        auditLogService.log(actorUsername, AuditActionCodes.QNA_CREATE, "QnaArticle", result.getId(),
+                AuditDetailFormatter.format("category", dto.getCategory()));
+        return result;
     }
 
     @Transactional
-    public QnaArticleResponseDto update(Long id, QnaArticleRequestDto dto) {
+    public QnaArticleResponseDto update(Long id, QnaArticleRequestDto dto, String actorUsername) {
         QnaArticle article = qnaArticleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("QnA article not found: " + id));
         article.update(dto.getQuestion(), dto.getAnswer(), dto.getCategory(), dto.getTags(), dto.getRelatedLinks());
@@ -87,23 +91,28 @@ public class QnaArticleService {
             article.setDisplayOrder(dto.getDisplayOrder());
         }
         article.incrementVersion();
+        auditLogService.log(actorUsername, AuditActionCodes.QNA_UPDATE, "QnaArticle", id,
+                AuditDetailFormatter.format("category", dto.getCategory()));
         return QnaArticleResponseDto.from(article);
     }
 
     @Transactional
-    public void updateStatus(Long id, QnaStatus status) {
+    public void updateStatus(Long id, QnaStatus status, String actorUsername) {
         QnaArticle article = qnaArticleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("QnA article not found: " + id));
         article.updateStatus(status);
+        auditLogService.log(actorUsername, AuditActionCodes.QNA_STATUS_CHANGE, "QnaArticle", id,
+                AuditDetailFormatter.format("status", String.valueOf(status)));
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actorUsername) {
         if (!qnaArticleRepository.existsById(id)) {
             throw new ResourceNotFoundException("QnA article not found: " + id);
         }
         qnaFeedbackRepository.deleteByQnaArticleId(id);
         qnaArticleRepository.deleteById(id);
+        auditLogService.log(actorUsername, AuditActionCodes.QNA_DELETE, "QnaArticle", id, null);
     }
 
     public Page<QnaArticleResponseDto> findAllAdmin(Pageable pageable) {

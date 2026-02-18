@@ -22,6 +22,7 @@ public class PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final AuditLogService auditLogService;
 
     public List<PermissionResponseDto> getPermissionsForRole(Role role) {
         Set<String> granted = rolePermissionRepository.findPermissionNamesByRole(role)
@@ -58,11 +59,13 @@ public class PermissionService {
     }
 
     @Transactional
-    public void togglePermission(Role role, Long permissionId, boolean granted) {
+    public void togglePermission(Role role, Long permissionId, boolean granted, String actorUsername) {
         if (granted) {
             grantPermission(role, permissionId);
         } else {
             revokePermission(role, permissionId);
         }
+        auditLogService.log(actorUsername, AuditActionCodes.PERMISSION_TOGGLE, "Permission", permissionId,
+                AuditDetailFormatter.format("role", String.valueOf(role), "granted", String.valueOf(granted)));
     }
 }

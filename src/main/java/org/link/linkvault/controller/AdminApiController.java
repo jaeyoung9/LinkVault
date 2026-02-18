@@ -33,7 +33,6 @@ public class AdminApiController {
     private final UserService userService;
     private final BookmarkService bookmarkService;
     private final TagService tagService;
-    private final AuditLogService auditLogService;
     private final SystemStatsService systemStatsService;
     private final DatabaseBackupService databaseBackupService;
     private final PermissionService permissionService;
@@ -51,14 +50,19 @@ public class AdminApiController {
 
     @PostMapping("/users")
     @PreAuthorize("hasAuthority('USER_MANAGE')")
-    public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserRequestDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(dto));
+    public ResponseEntity<UserResponseDto> createUser(
+            @Valid @RequestBody UserRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        UserResponseDto result = userService.create(dto, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PutMapping("/users/{id}")
     @PreAuthorize("hasAuthority('USER_MANAGE')")
-    public ResponseEntity<UserResponseDto> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequestDto dto) {
-        return ResponseEntity.ok(userService.update(id, dto));
+    public ResponseEntity<UserResponseDto> updateUser(
+            @PathVariable Long id, @Valid @RequestBody UserRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(userService.update(id, dto, userDetails.getUsername()));
     }
 
     @DeleteMapping("/users/{id}")
@@ -80,16 +84,20 @@ public class AdminApiController {
 
     @PostMapping("/users/bulk-deactivate-non-consented")
     @PreAuthorize("hasAuthority('USER_MANAGE')")
-    public ResponseEntity<Map<String, Object>> bulkDeactivateNonConsented() {
-        int count = userService.bulkDeactivateNonConsented("Bulk deactivated by admin: privacy policy not agreed");
+    public ResponseEntity<Map<String, Object>> bulkDeactivateNonConsented(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        int count = userService.bulkDeactivateNonConsented(
+                "Bulk deactivated by admin: privacy policy not agreed", userDetails.getUsername());
         return ResponseEntity.ok(Map.of("deactivated", count,
                 "message", count + " user(s) deactivated for not consenting to privacy policy"));
     }
 
     @PostMapping("/users/trigger-privacy-deactivation")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Map<String, Object>> triggerPrivacyDeactivation() {
-        int count = userService.bulkDeactivateNonConsented("Auto-deactivated (manual trigger): privacy policy not agreed");
+    public ResponseEntity<Map<String, Object>> triggerPrivacyDeactivation(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        int count = userService.bulkDeactivateNonConsented(
+                "Auto-deactivated (manual trigger): privacy policy not agreed", userDetails.getUsername());
         return ResponseEntity.ok(Map.of("deactivated", count,
                 "message", count + " user(s) deactivated via manual scheduler trigger"));
     }
@@ -98,22 +106,27 @@ public class AdminApiController {
 
     @PostMapping("/tags/merge")
     @PreAuthorize("hasAuthority('MANAGE_TAGS')")
-    public ResponseEntity<Map<String, String>> mergeTags(@RequestBody TagMergeRequestDto dto) {
-        tagService.mergeTags(dto.getSourceTagIds(), dto.getTargetTagName());
+    public ResponseEntity<Map<String, String>> mergeTags(
+            @RequestBody TagMergeRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        tagService.mergeTags(dto.getSourceTagIds(), dto.getTargetTagName(), userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Tags merged successfully"));
     }
 
     @DeleteMapping("/tags/unused")
     @PreAuthorize("hasAuthority('MANAGE_TAGS')")
-    public ResponseEntity<Map<String, Object>> deleteUnusedTags() {
-        int count = tagService.deleteUnusedTags();
+    public ResponseEntity<Map<String, Object>> deleteUnusedTags(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        int count = tagService.deleteUnusedTags(userDetails.getUsername());
         return ResponseEntity.ok(Map.of("deleted", count, "message", count + " unused tags deleted"));
     }
 
     @DeleteMapping("/tags/{id}")
     @PreAuthorize("hasAuthority('MANAGE_TAGS')")
-    public ResponseEntity<Void> deleteTag(@PathVariable Long id) {
-        tagService.delete(id);
+    public ResponseEntity<Void> deleteTag(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        tagService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
@@ -141,8 +154,9 @@ public class AdminApiController {
 
     @PostMapping("/backup")
     @PreAuthorize("hasAuthority('BACKUP_RUN')")
-    public ResponseEntity<Map<String, String>> createBackup() {
-        String filename = databaseBackupService.createBackup();
+    public ResponseEntity<Map<String, String>> createBackup(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String filename = databaseBackupService.createBackup(userDetails.getUsername());
         return ResponseEntity.ok(Map.of("filename", filename, "message", "Backup created: " + filename));
     }
 
@@ -154,12 +168,14 @@ public class AdminApiController {
 
     @PostMapping("/restore")
     @PreAuthorize("hasAuthority('BACKUP_RUN')")
-    public ResponseEntity<Map<String, String>> restoreBackup(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, String>> restoreBackup(
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
         String filename = body.get("filename");
         if (filename == null || filename.isBlank()) {
             throw new IllegalArgumentException("Filename is required");
         }
-        databaseBackupService.restoreBackup(filename);
+        databaseBackupService.restoreBackup(filename, userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Database restored from: " + filename));
     }
 
@@ -183,15 +199,19 @@ public class AdminApiController {
 
     @PatchMapping("/comments/{id}/restore")
     @PreAuthorize("hasAuthority('COMMENT_RESTORE')")
-    public ResponseEntity<Map<String, String>> restoreComment(@PathVariable Long id) {
-        commentService.restoreComment(id);
+    public ResponseEntity<Map<String, String>> restoreComment(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        commentService.restoreComment(id, userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Comment restored"));
     }
 
     @DeleteMapping("/comments/{id}/purge")
     @PreAuthorize("hasAuthority('CONTENT_PURGE')")
-    public ResponseEntity<Void> purgeComment(@PathVariable Long id) {
-        commentService.purgeComment(id);
+    public ResponseEntity<Void> purgeComment(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        commentService.purgeComment(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
@@ -241,20 +261,25 @@ public class AdminApiController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody InvitationCodeRequestDto dto) {
         User creator = userService.getUserEntity(userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(invitationService.create(dto, creator));
+        InvitationCodeResponseDto result = invitationService.create(dto, creator, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PatchMapping("/invitations/{id}/toggle")
     @PreAuthorize("hasAuthority('INVITE_REVOKE')")
-    public ResponseEntity<Map<String, String>> toggleInvitation(@PathVariable Long id) {
-        invitationService.toggleActive(id);
+    public ResponseEntity<Map<String, String>> toggleInvitation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        invitationService.toggleActive(id, userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Invitation toggled"));
     }
 
     @DeleteMapping("/invitations/{id}")
     @PreAuthorize("hasAuthority('INVITE_REVOKE')")
-    public ResponseEntity<Void> deleteInvitation(@PathVariable Long id) {
-        invitationService.delete(id);
+    public ResponseEntity<Void> deleteInvitation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        invitationService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
@@ -272,36 +297,42 @@ public class AdminApiController {
     public ResponseEntity<MenuItemResponseDto> createMenuItem(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody MenuItemRequestDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(menuService.create(dto, userDetails.getUsername()));
+        MenuItemResponseDto result = menuService.create(dto, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PutMapping("/menus/{id}")
     @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<MenuItemResponseDto> updateMenuItem(
-            @PathVariable Long id, @Valid @RequestBody MenuItemRequestDto dto) {
-        return ResponseEntity.ok(menuService.update(id, dto));
+            @PathVariable Long id, @Valid @RequestBody MenuItemRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(menuService.update(id, dto, userDetails.getUsername()));
     }
 
     @DeleteMapping("/menus/{id}")
     @PreAuthorize("hasAuthority('MENU_MANAGE')")
-    public ResponseEntity<Void> deleteMenuItem(@PathVariable Long id) {
-        menuService.delete(id);
+    public ResponseEntity<Void> deleteMenuItem(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        menuService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/menus/{id}/toggle")
     @PreAuthorize("hasAuthority('MENU_MANAGE')")
-    public ResponseEntity<Map<String, String>> toggleMenuVisibility(@PathVariable Long id) {
-        menuService.toggleVisibility(id);
+    public ResponseEntity<Map<String, String>> toggleMenuVisibility(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        menuService.toggleVisibility(id, userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Menu visibility toggled"));
     }
 
     @PatchMapping("/menus/reorder")
     @PreAuthorize("hasAuthority('MENU_MANAGE')")
     public ResponseEntity<Map<String, String>> reorderMenuItems(
-            @RequestBody List<MenuItemOrderDto> orders) {
-        menuService.reorder(orders);
+            @RequestBody List<MenuItemOrderDto> orders,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        menuService.reorder(orders, userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Menu reordered"));
     }
 
@@ -315,8 +346,10 @@ public class AdminApiController {
 
     @PostMapping("/permissions/toggle")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Map<String, String>> togglePermission(@Valid @RequestBody RolePermissionRequestDto dto) {
-        permissionService.togglePermission(dto.getRole(), dto.getPermissionId(), dto.isGranted());
+    public ResponseEntity<Map<String, String>> togglePermission(
+            @Valid @RequestBody RolePermissionRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        permissionService.togglePermission(dto.getRole(), dto.getPermissionId(), dto.isGranted(), userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Permission updated"));
     }
 
@@ -334,28 +367,33 @@ public class AdminApiController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody QnaArticleRequestDto dto) {
         User creator = userService.getUserEntity(userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(qnaArticleService.create(dto, creator));
+        QnaArticleResponseDto result = qnaArticleService.create(dto, creator, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PutMapping("/qna/{id}")
     @PreAuthorize("hasAuthority('MANAGE_QNA')")
     public ResponseEntity<QnaArticleResponseDto> updateQnaArticle(
-            @PathVariable Long id, @Valid @RequestBody QnaArticleRequestDto dto) {
-        return ResponseEntity.ok(qnaArticleService.update(id, dto));
+            @PathVariable Long id, @Valid @RequestBody QnaArticleRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(qnaArticleService.update(id, dto, userDetails.getUsername()));
     }
 
     @PatchMapping("/qna/{id}/status")
     @PreAuthorize("hasAuthority('MANAGE_QNA')")
     public ResponseEntity<Map<String, String>> updateQnaStatus(
-            @PathVariable Long id, @Valid @RequestBody QnaStatusUpdateRequestDto dto) {
-        qnaArticleService.updateStatus(id, dto.getStatus());
+            @PathVariable Long id, @Valid @RequestBody QnaStatusUpdateRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        qnaArticleService.updateStatus(id, dto.getStatus(), userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Status updated"));
     }
 
     @DeleteMapping("/qna/{id}")
     @PreAuthorize("hasAuthority('MANAGE_QNA')")
-    public ResponseEntity<Void> deleteQnaArticle(@PathVariable Long id) {
-        qnaArticleService.delete(id);
+    public ResponseEntity<Void> deleteQnaArticle(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        qnaArticleService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
@@ -373,28 +411,33 @@ public class AdminApiController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody AnnouncementRequestDto dto) {
         User creator = userService.getUserEntity(userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(announcementService.create(dto, creator));
+        AnnouncementResponseDto result = announcementService.create(dto, creator, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PutMapping("/announcements/{id}")
     @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
     public ResponseEntity<AnnouncementResponseDto> updateAnnouncement(
-            @PathVariable Long id, @Valid @RequestBody AnnouncementRequestDto dto) {
-        return ResponseEntity.ok(announcementService.update(id, dto));
+            @PathVariable Long id, @Valid @RequestBody AnnouncementRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(announcementService.update(id, dto, userDetails.getUsername()));
     }
 
     @PatchMapping("/announcements/{id}/status")
     @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
     public ResponseEntity<Map<String, String>> updateAnnouncementStatus(
-            @PathVariable Long id, @Valid @RequestBody AnnouncementStatusUpdateRequestDto dto) {
-        announcementService.updateStatus(id, dto.getStatus());
+            @PathVariable Long id, @Valid @RequestBody AnnouncementStatusUpdateRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        announcementService.updateStatus(id, dto.getStatus(), userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Status updated"));
     }
 
     @DeleteMapping("/announcements/{id}")
     @PreAuthorize("hasAuthority('MANAGE_ANNOUNCEMENTS')")
-    public ResponseEntity<Void> deleteAnnouncement(@PathVariable Long id) {
-        announcementService.delete(id);
+    public ResponseEntity<Void> deleteAnnouncement(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        announcementService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
@@ -442,7 +485,7 @@ public class AdminApiController {
             @RequestBody Map<String, String> body) {
         User admin = userService.getUserEntity(userDetails.getUsername());
         String content = body.get("content");
-        return ResponseEntity.ok(privacyPolicyService.update(content, admin));
+        return ResponseEntity.ok(privacyPolicyService.update(content, admin, userDetails.getUsername()));
     }
 
     @GetMapping("/privacy-policy/history")
@@ -473,9 +516,10 @@ public class AdminApiController {
     @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
     public ResponseEntity<SystemSettingsResponseDto> updateSetting(
             @PathVariable String key,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
         String value = body.get("value");
-        var updated = systemSettingsService.updateValue(key, value);
+        var updated = systemSettingsService.updateValue(key, value, userDetails.getUsername());
         if (key.startsWith("file-vault.")) {
             fileVaultService.reloadSettings();
         }

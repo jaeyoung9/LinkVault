@@ -63,6 +63,9 @@ public class ReportService {
                 .orElseThrow(() -> new ResourceNotFoundException("Report not found with id: " + id));
         report.review(reviewer, status);
 
+        auditLogService.log(reviewer.getUsername(), AuditActionCodes.REPORT_REVIEW, "Report", id,
+                AuditDetailFormatter.format("status", String.valueOf(status)));
+
         if (status == ReportStatus.ACTIONED) {
             checkAndDisableUser(report, reviewer);
         }
@@ -91,8 +94,8 @@ public class ReportService {
         if (actionedCount >= threshold) {
             targetUser.deactivateForPrivacy("Auto-disabled: " + actionedCount + " actioned reports exceeded threshold of " + threshold);
             userRepository.save(targetUser);
-            auditLogService.log(reviewer.getUsername(), "AUTO_DISABLE_USER", "User", targetUser.getId(),
-                    "User '" + targetUser.getUsername() + "' auto-disabled after " + actionedCount + " actioned reports");
+            auditLogService.log(reviewer.getUsername(), AuditActionCodes.AUTO_DISABLE_USER, "User", targetUser.getId(),
+                    AuditDetailFormatter.format("username", targetUser.getUsername(), "actionedReports", String.valueOf(actionedCount)));
             log.info("User '{}' auto-disabled: {} actioned reports >= threshold {}", targetUser.getUsername(), actionedCount, threshold);
 
             // Bulk soft-delete all user's posts and comments
@@ -114,8 +117,9 @@ public class ReportService {
                 }
             }
 
-            auditLogService.log(reviewer.getUsername(), "BULK_SOFT_DELETE_CONTENT", "User", targetUser.getId(),
-                    "Soft-deleted " + deletedPosts + " posts and " + deletedComments + " comments for disabled user '" + targetUser.getUsername() + "'");
+            auditLogService.log(reviewer.getUsername(), AuditActionCodes.BULK_SOFT_DELETE_CONTENT, "User", targetUser.getId(),
+                    AuditDetailFormatter.format("username", targetUser.getUsername(),
+                            "deletedPosts", String.valueOf(deletedPosts), "deletedComments", String.valueOf(deletedComments)));
             log.info("Bulk soft-deleted {} posts and {} comments for disabled user '{}'", deletedPosts, deletedComments, targetUser.getUsername());
         }
     }

@@ -15,6 +15,7 @@ import java.util.Optional;
 public class SystemSettingsService {
 
     private final SystemSettingsRepository systemSettingsRepository;
+    private final AuditLogService auditLogService;
 
     public List<SystemSettings> findAll() {
         return systemSettingsRepository.findAllByOrderByCategoryAscSettingKeyAsc();
@@ -30,11 +31,14 @@ public class SystemSettingsService {
     }
 
     @Transactional
-    public SystemSettings updateValue(String key, String value) {
+    public SystemSettings updateValue(String key, String value, String actorUsername) {
         SystemSettings settings = systemSettingsRepository.findBySettingKey(key)
                 .orElseThrow(() -> new IllegalArgumentException("Setting not found: " + key));
         settings.updateValue(value);
-        return systemSettingsRepository.save(settings);
+        SystemSettings saved = systemSettingsRepository.save(settings);
+        auditLogService.log(actorUsername, AuditActionCodes.SETTINGS_UPDATE, "SystemSettings", null,
+                AuditDetailFormatter.format("key", key));
+        return saved;
     }
 
     @Transactional

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class TagService {
 
     private final TagRepository tagRepository;
+    private final AuditLogService auditLogService;
 
     public List<TagResponseDto> findAll() {
         return tagRepository.findAllWithBookmarks().stream()
@@ -43,7 +44,7 @@ public class TagService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actorUsername) {
         Tag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + id));
         // Remove tag from all bookmarks first
@@ -51,10 +52,11 @@ public class TagService {
             bookmark.removeTag(tag);
         }
         tagRepository.delete(tag);
+        auditLogService.log(actorUsername, AuditActionCodes.TAG_DELETE, "Tag", id, null);
     }
 
     @Transactional
-    public void mergeTags(Set<Long> sourceTagIds, String targetTagName) {
+    public void mergeTags(Set<Long> sourceTagIds, String targetTagName, String actorUsername) {
         Tag targetTag = tagRepository.findByName(targetTagName)
                 .orElseGet(() -> tagRepository.save(new Tag(targetTagName)));
 
@@ -74,12 +76,16 @@ public class TagService {
 
             tagRepository.delete(sourceTag);
         }
+        auditLogService.log(actorUsername, AuditActionCodes.TAG_MERGE, "Tag", null,
+                AuditDetailFormatter.format("target", targetTagName, "sourceCount", String.valueOf(sourceTagIds.size())));
     }
 
     @Transactional
-    public int deleteUnusedTags() {
+    public int deleteUnusedTags(String actorUsername) {
         List<Tag> unused = tagRepository.findUnusedTags();
         tagRepository.deleteAll(unused);
+        auditLogService.log(actorUsername, AuditActionCodes.TAG_CLEANUP, "Tag", null,
+                AuditDetailFormatter.format("deleted", String.valueOf(unused.size())));
         return unused.size();
     }
 

@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class PrivacyPolicyService {
 
     private final PrivacyPolicyRepository privacyPolicyRepository;
+    private final AuditLogService auditLogService;
 
     public PrivacyPolicyResponseDto getActivePolicy() {
         return privacyPolicyRepository.findByActiveTrue()
@@ -25,7 +26,7 @@ public class PrivacyPolicyService {
     }
 
     @Transactional
-    public PrivacyPolicyResponseDto update(String content, User admin) {
+    public PrivacyPolicyResponseDto update(String content, User admin, String actorUsername) {
         int nextVersion = 1;
         PrivacyPolicy current = privacyPolicyRepository.findByActiveTrue().orElse(null);
         if (current != null) {
@@ -40,7 +41,10 @@ public class PrivacyPolicyService {
                 .updatedBy(admin)
                 .build();
 
-        return PrivacyPolicyResponseDto.from(privacyPolicyRepository.save(newPolicy));
+        PrivacyPolicyResponseDto result = PrivacyPolicyResponseDto.from(privacyPolicyRepository.save(newPolicy));
+        auditLogService.log(actorUsername, AuditActionCodes.PRIVACY_POLICY_UPDATE, "PrivacyPolicy", null,
+                AuditDetailFormatter.format("version", String.valueOf(result.getVersion())));
+        return result;
     }
 
     public List<PrivacyPolicyResponseDto> findAll() {

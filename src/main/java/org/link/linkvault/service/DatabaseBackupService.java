@@ -21,12 +21,13 @@ import java.util.stream.Collectors;
 public class DatabaseBackupService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final AuditLogService auditLogService;
 
     private static final String BACKUP_DIR = "backups";
     private static final Pattern BACKUP_FILENAME_PATTERN =
             Pattern.compile("^linkvault_backup_\\d{8}_\\d{6}\\.sql$");
 
-    public String createBackup() {
+    public String createBackup(String actorUsername) {
         File dir = new File(BACKUP_DIR);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -38,6 +39,8 @@ public class DatabaseBackupService {
 
         jdbcTemplate.execute("SCRIPT TO '" + fullPath + "'");
         log.info("Database backup created: {}", filename);
+        auditLogService.log(actorUsername, AuditActionCodes.BACKUP_CREATE, "System", null,
+                AuditDetailFormatter.format("filename", filename));
         return filename;
     }
 
@@ -55,7 +58,7 @@ public class DatabaseBackupService {
                 .collect(Collectors.toList());
     }
 
-    public void restoreBackup(String filename) {
+    public void restoreBackup(String filename, String actorUsername) {
         if (filename == null || filename.isBlank()) {
             throw new IllegalArgumentException("Filename must not be empty");
         }
@@ -85,5 +88,7 @@ public class DatabaseBackupService {
         String fullPath = file.getAbsolutePath().replace("\\", "/");
         jdbcTemplate.execute("RUNSCRIPT FROM '" + fullPath + "'");
         log.info("Database restored from backup: {}", filename);
+        auditLogService.log(actorUsername, AuditActionCodes.BACKUP_RESTORE, "System", null,
+                AuditDetailFormatter.format("filename", filename));
     }
 }

@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class MenuService {
 
     private final MenuItemRepository menuItemRepository;
+    private final AuditLogService auditLogService;
     private final ConcurrentHashMap<String, List<MenuItemResponseDto>> menuCache = new ConcurrentHashMap<>();
 
     public List<MenuItemResponseDto> getMenuItems(MenuType menuType) {
@@ -126,11 +127,13 @@ public class MenuService {
 
         item = menuItemRepository.save(item);
         clearCache();
+        auditLogService.log(createdBy, AuditActionCodes.MENU_CREATE, "MenuItem", item.getId(),
+                AuditDetailFormatter.format("label", dto.getLabel()));
         return MenuItemResponseDto.from(item);
     }
 
     @Transactional
-    public MenuItemResponseDto update(Long id, MenuItemRequestDto dto) {
+    public MenuItemResponseDto update(Long id, MenuItemRequestDto dto, String actorUsername) {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + id));
 
@@ -142,27 +145,31 @@ public class MenuService {
         }
 
         clearCache();
+        auditLogService.log(actorUsername, AuditActionCodes.MENU_UPDATE, "MenuItem", id,
+                AuditDetailFormatter.format("label", dto.getLabel()));
         return MenuItemResponseDto.from(item);
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actorUsername) {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + id));
         menuItemRepository.delete(item);
         clearCache();
+        auditLogService.log(actorUsername, AuditActionCodes.MENU_DELETE, "MenuItem", id, null);
     }
 
     @Transactional
-    public void toggleVisibility(Long id) {
+    public void toggleVisibility(Long id, String actorUsername) {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + id));
         item.setVisible(!item.isVisible());
         clearCache();
+        auditLogService.log(actorUsername, AuditActionCodes.MENU_TOGGLE, "MenuItem", id, null);
     }
 
     @Transactional
-    public void reorder(List<MenuItemOrderDto> orders) {
+    public void reorder(List<MenuItemOrderDto> orders, String actorUsername) {
         for (MenuItemOrderDto order : orders) {
             MenuItem item = menuItemRepository.findById(order.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + order.getId()));
@@ -176,6 +183,8 @@ public class MenuService {
             }
         }
         clearCache();
+        auditLogService.log(actorUsername, AuditActionCodes.MENU_REORDER, "MenuItem", null,
+                AuditDetailFormatter.format("count", String.valueOf(orders.size())));
     }
 
     public void clearCache() {

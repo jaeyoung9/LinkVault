@@ -36,6 +36,9 @@ public class AuditLog {
     @Column(length = 500)
     private String details;
 
+    @Column(length = 100)
+    private String actorUsername;
+
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
@@ -45,6 +48,7 @@ public class AuditLog {
         this.entityType = entityType;
         this.entityId = entityId;
         this.details = details;
+        this.actorUsername = user != null ? user.getUsername() : null;
         this.timestamp = LocalDateTime.now();
     }
 }

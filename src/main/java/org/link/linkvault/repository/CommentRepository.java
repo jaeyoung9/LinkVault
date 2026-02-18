@@ -29,5 +29,9 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("UPDATE Comment c SET c.parent = null WHERE c.parent.id IN (SELECT c2.id FROM Comment c2 WHERE c2.user.id = :userId)")
     void detachRepliesFromUserComments(@Param("userId") Long userId);
 
+    @Modifying
+    @Query("UPDATE Comment c SET c.parent = null WHERE c.parent.id = :parentId")
+    void detachRepliesFromComment(@Param("parentId") Long parentId);
+
     void deleteByUserId(Long userId);
 }

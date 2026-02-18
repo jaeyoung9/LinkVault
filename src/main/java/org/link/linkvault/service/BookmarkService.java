@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.BookmarkRequestDto;
 import org.link.linkvault.dto.BookmarkResponseDto;
 import org.link.linkvault.entity.Bookmark;
+import org.link.linkvault.entity.Comment;
 import org.link.linkvault.entity.Folder;
 import org.link.linkvault.entity.PostPhoto;
 import org.link.linkvault.entity.Role;
@@ -12,6 +13,8 @@ import org.link.linkvault.entity.User;
 import org.link.linkvault.exception.DuplicateUrlException;
 import org.link.linkvault.exception.ResourceNotFoundException;
 import org.link.linkvault.repository.BookmarkRepository;
+import org.link.linkvault.repository.CommentRepository;
+import org.link.linkvault.repository.CommentVoteRepository;
 import org.link.linkvault.repository.FolderRepository;
 import org.link.linkvault.repository.PostPhotoRepository;
 import org.link.linkvault.repository.TagRepository;
@@ -38,6 +41,8 @@ public class BookmarkService {
     private final TagRepository tagRepository;
     private final FolderRepository folderRepository;
     private final PostPhotoRepository postPhotoRepository;
+    private final CommentRepository commentRepository;
+    private final CommentVoteRepository commentVoteRepository;
     private final MetadataExtractor metadataExtractor;
     private final AuditLogService auditLogService;
     private final FileVaultService fileVaultService;
@@ -128,7 +133,7 @@ public class BookmarkService {
         // Process photos (max 4)
         processPhotos(saved, photos);
 
-        auditLogService.log(currentUser.getUsername(), "CREATE_BOOKMARK", "Bookmark", saved.getId(), title);
+        auditLogService.log(currentUser.getUsername(), AuditActionCodes.BOOKMARK_CREATE, "Bookmark", saved.getId(), title);
         return BookmarkResponseDto.from(saved);
     }
 
@@ -225,7 +230,7 @@ public class BookmarkService {
         // Handle new photo additions
         processPhotos(bookmark, newPhotos);
 
-        auditLogService.log(currentUser.getUsername(), "UPDATE_BOOKMARK", "Bookmark", id, requestDto.getTitle());
+        auditLogService.log(currentUser.getUsername(), AuditActionCodes.BOOKMARK_UPDATE, "Bookmark", id, requestDto.getTitle());
         return BookmarkResponseDto.from(bookmark);
     }
 
@@ -246,7 +251,7 @@ public class BookmarkService {
         }
 
         bookmark.softDelete();
-        auditLogService.log(currentUser.getUsername(), "SOFT_DELETE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
+        auditLogService.log(currentUser.getUsername(), AuditActionCodes.BOOKMARK_SOFT_DELETE, "Bookmark", id, bookmark.getTitle());
     }
 
     @Transactional
@@ -254,7 +259,7 @@ public class BookmarkService {
         Bookmark bookmark = bookmarkRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
         bookmark.restore();
-        auditLogService.log(currentUser.getUsername(), "RESTORE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
+        auditLogService.log(currentUser.getUsername(), AuditActionCodes.BOOKMARK_RESTORE, "Bookmark", id, bookmark.getTitle());
     }
 
     public Page<BookmarkResponseDto> findAllDeleted(Pageable pageable) {
@@ -270,15 +275,27 @@ public class BookmarkService {
             throw new IllegalStateException("Cannot purge a bookmark that is not soft-deleted");
         }
 
-        // Delete photo files from disk
+        // 1. Delete comment votes for each comment on this bookmark
+        List<Comment> comments = commentRepository.findAllByBookmarkId(id);
+        for (Comment comment : comments) {
+            commentVoteRepository.deleteByCommentId(comment.getId());
+        }
+
+        // 2. Detach child comments and delete all comments on this bookmark
+        commentRepository.deleteByBookmarkId(id);
+
+        // 3. Delete photo files from disk
         if (bookmark.getPhotos() != null) {
             for (PostPhoto photo : bookmark.getPhotos()) {
                 fileVaultService.delete(photo.getStoragePath());
             }
         }
 
+        // 4. Delete bookmark only after dependencies are cleaned
         bookmarkRepository.delete(bookmark);
-        auditLogService.log(currentUser.getUsername(), "PURGE_BOOKMARK", "Bookmark", id, bookmark.getTitle());
+
+        // 5. Audit log after successful purge
+        auditLogService.log(currentUser.getUsername(), AuditActionCodes.BOOKMARK_PURGE, "Bookmark", id, bookmark.getTitle());
     }
 
     // --- Access tracking ---

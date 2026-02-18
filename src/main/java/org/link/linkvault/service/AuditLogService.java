@@ -1,6 +1,7 @@
 package org.link.linkvault.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.link.linkvault.dto.AuditLogResponseDto;
 import org.link.linkvault.entity.AuditLog;
 import org.link.linkvault.entity.User;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
@@ -21,9 +23,14 @@ public class AuditLogService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String username, String action, String entityType, Long entityId, String details) {
-        User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
-        AuditLog auditLog = new AuditLog(user, action, entityType, entityId, details);
-        auditLogRepository.save(auditLog);
+        try {
+            User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
+            AuditLog auditLog = new AuditLog(user, action, entityType, entityId, details);
+            auditLogRepository.save(auditLog);
+        } catch (Exception e) {
+            log.warn("AUDIT_PERSIST_FAILURE action={} entityType={} entityId={} actor={}: {}",
+                    action, entityType, entityId, username, e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)

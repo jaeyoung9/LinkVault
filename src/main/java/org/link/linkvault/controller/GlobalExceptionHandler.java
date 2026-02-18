@@ -3,6 +3,7 @@ package org.link.linkvault.controller;
 import org.link.linkvault.exception.DuplicateUrlException;
 import org.link.linkvault.exception.ResourceNotFoundException;
 import javax.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -81,6 +82,12 @@ public class GlobalExceptionHandler {
             }
         }
         return buildResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        return buildResponse(HttpStatus.CONFLICT, "Operation failed due to a data conflict. Related records may need to be cleaned up first.");
     }
 
     @ExceptionHandler(AccessDeniedException.class)

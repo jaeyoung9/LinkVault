@@ -24,6 +24,7 @@ public class AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
     private final AnnouncementReadRepository announcementReadRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public List<AnnouncementResponseDto> findVisibleForUser(User user) {
@@ -112,7 +113,7 @@ public class AnnouncementService {
     }
 
     @Transactional
-    public AnnouncementResponseDto create(AnnouncementRequestDto dto, User creator) {
+    public AnnouncementResponseDto create(AnnouncementRequestDto dto, User creator, String actorUsername) {
         Announcement announcement = Announcement.builder()
                 .title(dto.getTitle())
                 .content(dto.getContent())
@@ -124,32 +125,39 @@ public class AnnouncementService {
                 .pinned(dto.isPinned())
                 .createdBy(creator)
                 .build();
-        return AnnouncementResponseDto.from(announcementRepository.save(announcement));
+        AnnouncementResponseDto result = AnnouncementResponseDto.from(announcementRepository.save(announcement));
+        auditLogService.log(actorUsername, AuditActionCodes.ANNOUNCEMENT_CREATE, "Announcement", result.getId(),
+                AuditDetailFormatter.format("priority", String.valueOf(dto.getPriority())));
+        return result;
     }
 
     @Transactional
-    public AnnouncementResponseDto update(Long id, AnnouncementRequestDto dto) {
+    public AnnouncementResponseDto update(Long id, AnnouncementRequestDto dto, String actorUsername) {
         Announcement announcement = announcementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Announcement not found: " + id));
         announcement.update(dto.getTitle(), dto.getContent(), dto.getPriority(),
                 dto.getTargetRole(), dto.getStartAt(), dto.getEndAt(), dto.isPinned());
+        auditLogService.log(actorUsername, AuditActionCodes.ANNOUNCEMENT_UPDATE, "Announcement", id, null);
         return AnnouncementResponseDto.from(announcement);
     }
 
     @Transactional
-    public void updateStatus(Long id, AnnouncementStatus status) {
+    public void updateStatus(Long id, AnnouncementStatus status, String actorUsername) {
         Announcement announcement = announcementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Announcement not found: " + id));
         announcement.updateStatus(status);
+        auditLogService.log(actorUsername, AuditActionCodes.ANNOUNCEMENT_STATUS, "Announcement", id,
+                AuditDetailFormatter.format("status", String.valueOf(status)));
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actorUsername) {
         if (!announcementRepository.existsById(id)) {
             throw new ResourceNotFoundException("Announcement not found: " + id);
         }
         announcementReadRepository.deleteByAnnouncementId(id);
         announcementRepository.deleteById(id);
+        auditLogService.log(actorUsername, AuditActionCodes.ANNOUNCEMENT_DELETE, "Announcement", id, null);
     }
 
     public AnnouncementResponseDto findByIdAdmin(Long id) {
