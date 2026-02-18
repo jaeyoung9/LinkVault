@@ -53,6 +53,12 @@ public class User {
     @Column(length = 200)
     private String deactivationReason;
 
+    @Column(nullable = false)
+    private int rewardPoints = 0;
+
+    @Column(nullable = false)
+    private boolean supporter = false;
+
     @OneToMany(mappedBy = "user")
     private List<Bookmark> bookmarks = new ArrayList<>();
 
@@ -102,5 +108,20 @@ public class User {
         this.enabled = false;
         this.deactivatedAt = LocalDateTime.now();
         this.deactivationReason = reason;
+    }
+
+    public void addRewardPoints(int points) {
+        this.rewardPoints += points;
+    }
+
+    public void deductRewardPoints(int points) {
+        if (this.rewardPoints < points) {
+            throw new IllegalStateException("Insufficient reward points");
+        }
+        this.rewardPoints -= points;
+    }
+
+    public void markAsSupporter() {
+        this.supporter = true;
     }
 }

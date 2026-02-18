@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDateTime;
+
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor
@@ -31,6 +33,9 @@ public class AdminWebController {
     private final AnnouncementService announcementService;
     private final PrivacyPolicyService privacyPolicyService;
     private final ReportService reportService;
+    private final MonetizationStatsService monetizationStatsService;
+    private final GuestEventService guestEventService;
+    private final TransparencyReportService transparencyReportService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_STATS')")
@@ -154,5 +159,35 @@ public class AdminWebController {
     @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
     public String settings() {
         return "admin/settings";
+    }
+
+    @GetMapping("/monetization")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public String monetization(Model model) {
+        model.addAttribute("stats", monetizationStatsService.getStats());
+        return "admin/monetization";
+    }
+
+    @GetMapping("/guest-analytics")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public String guestAnalytics(
+            @RequestParam(defaultValue = "90") int days,
+            Model model) {
+        LocalDateTime from = LocalDateTime.now().minusDays(days);
+        LocalDateTime to = LocalDateTime.now();
+        model.addAttribute("funnel", guestEventService.getFunnelStats(from, to));
+        model.addAttribute("days", days);
+        return "admin/guest-analytics";
+    }
+
+    @GetMapping("/transparency-reports")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public String transparencyReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model) {
+        model.addAttribute("reports", transparencyReportService.findAll(
+                PageRequest.of(page, size)));
+        return "admin/transparency-reports";
     }
 }

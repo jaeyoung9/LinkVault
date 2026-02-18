@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Transparency Reports - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div style="max-width: 800px; margin: 0 auto; padding: 40px 20px;">
+    <h1 style="margin-bottom: 8px;">Transparency Reports</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">
+        We publish quarterly reports showing how supporter funds are used.
+    </p>
+
+    <div th:if="${reports != null and !reports.isEmpty()}">
+        <div th:each="report : ${reports}" class="transparency-card">
+            <h3><a th:href="@{'/transparency/' + ${report.id}}" th:text="${report.title}">Report Title</a></h3>
+            <div class="period" th:text="${report.period}">Q1 2026</div>
+            <div class="transparency-totals">
+                <div class="transparency-total">
+                    <div class="amount" th:text="'$' + ${#numbers.formatDecimal(report.totalDonationsCents / 100.0, 1, 2)}">$0.00</div>
+                    <div class="label">Donations Received</div>
+                </div>
+                <div class="transparency-total">
+                    <div class="amount" th:text="'$' + ${#numbers.formatDecimal(report.totalPassRevenueCents / 100.0, 1, 2)}">$0.00</div>
+                    <div class="label">Pass Revenue</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${reports == null or reports.isEmpty()}" class="empty-state">
+        <p>No transparency reports published yet.</p>
+    </div>
+
+    <div style="margin-top: 24px;">
+        <a href="/" style="color: var(--text-muted);">&larr; Back to LinkVault</a>
+    </div>
+</div>
+</body>
+</html>

@@ -31,6 +31,13 @@
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>
         </form>
 
+        <div th:if="${guestAccessEnabled}" style="text-align: center; margin-top: 16px;">
+            <a href="/" class="btn btn-outline btn-block"
+               style="border-color: var(--border); color: var(--text-secondary);">
+                Continue as Guest
+            </a>
+        </div>
+
         <p style="text-align: center; margin-top: 16px; font-size: 0.85rem;">
             Have an invitation code? <a href="/register">Register</a>
         </p>

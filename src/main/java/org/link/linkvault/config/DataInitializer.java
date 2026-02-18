@@ -275,7 +275,9 @@ public class DataInitializer implements CommandLineRunner {
                 new Permission("REPORT_SUBMIT", "Submit content reports", "COMMUNITY"),
                 new Permission("REPORT_REVIEW", "Review content reports", "MODERATION"),
                 new Permission("POST_MODERATE", "Moderate any post", "MODERATION"),
-                new Permission("SYSTEM_SETTINGS", "Manage system settings", "ADMIN")
+                new Permission("SYSTEM_SETTINGS", "Manage system settings", "ADMIN"),
+                new Permission("VIEW_MONETIZATION", "View monetization dashboard", "ADMIN"),
+                new Permission("MANAGE_PAYMENTS", "Manage payments and refunds", "ADMIN")
         );
         permissionRepository.saveAll(permissions);
 
@@ -286,7 +288,8 @@ public class DataInitializer implements CommandLineRunner {
                 "AUDIT_VIEW", "BACKUP_RUN", "VIEW_STATS", "MANAGE_ANNOUNCEMENTS",
                 "MANAGE_TAGS", "MANAGE_BOOKMARKS", "BOOKMARK_DELETE_ANY", "BOOKMARK_RESTORE",
                 "MANAGE_QNA", "COMMENT_HIDE", "COMMENT_RESTORE",
-                "COMMENT", "VOTE", "SYSTEM_SETTINGS"
+                "COMMENT", "VOTE", "SYSTEM_SETTINGS",
+                "VIEW_MONETIZATION", "MANAGE_PAYMENTS"
         ));
 
         // MODERATOR: limited admin + community + moderation
@@ -402,6 +405,10 @@ public class DataInitializer implements CommandLineRunner {
                 .displayOrder(13).visible(true).requiredRole(Role.SUPER_ADMIN).systemItem(true).createdBy("system").build());
         menuItemRepository.save(MenuItem.builder().label("Settings").url("/admin/settings").menuType(MenuType.ADMIN_SIDEBAR)
                 .displayOrder(14).visible(true).requiredPermission("SYSTEM_SETTINGS").systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("Monetization").url("/admin/monetization").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(15).visible(true).requiredPermission("VIEW_MONETIZATION").systemItem(true).createdBy("system").build());
+        menuItemRepository.save(MenuItem.builder().label("Guest Analytics").url("/admin/guest-analytics").menuType(MenuType.ADMIN_SIDEBAR)
+                .displayOrder(16).visible(true).requiredPermission("VIEW_MONETIZATION").systemItem(true).createdBy("system").build());
 
         log.info("Menu items initialized");
     }
@@ -547,5 +554,102 @@ public class DataInitializer implements CommandLineRunner {
                 .build());
 
         log.info("System settings initialized with defaults");
+
+        // Monetization settings
+        initMonetizationSettings();
+    }
+
+    private void initMonetizationSettings() {
+        log.info("Initializing monetization settings...");
+
+        // Feature flags (all OFF by default)
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("feature.guest-access-enabled").settingValue("false")
+                .description("Enable anonymous guest read access").category("FEATURE_FLAGS").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("feature.ads-enabled").settingValue("false")
+                .description("Enable ad display globally").category("FEATURE_FLAGS").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("feature.rewarded-video-enabled").settingValue("false")
+                .description("Enable rewarded video system").category("FEATURE_FLAGS").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("feature.donations-enabled").settingValue("false")
+                .description("Enable donation section").category("FEATURE_FLAGS").build());
+
+        // Ad policy
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.max-per-page").settingValue("3")
+                .description("Max ad cards per page load").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.max-per-session").settingValue("10")
+                .description("Max ads per session").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.max-per-hour").settingValue("15")
+                .description("Max ads per hour").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.feed-insertion-interval").settingValue("6")
+                .description("Insert 1 ad every N posts").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.guest-frequency-multiplier").settingValue("1.5")
+                .description("Guest ad frequency multiplier vs members").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.guest-first-session-grace").settingValue("3")
+                .description("Page views before first guest ad").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.adsense-client-id").settingValue("")
+                .description("Google AdSense client ID (ca-pub-xxx)").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.adsense-slot-feed").settingValue("")
+                .description("AdSense slot ID for feed native ads (1234567890)").category("AD_POLICY").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("ad.adsense-layout-key").settingValue("")
+                .description("AdSense in-feed ad layout key (e.g. -ef+6k-30-ac+ty)").category("AD_POLICY").build());
+
+        // Reward settings
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("reward.video-points").settingValue("10")
+                .description("Points per rewarded video").category("REWARD").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("reward.adfree-hours-cost").settingValue("50")
+                .description("Points to redeem ad-free hours").category("REWARD").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("reward.adfree-hours-duration").settingValue("2")
+                .description("Hours per redemption").category("REWARD").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("reward.daily-video-cap").settingValue("5")
+                .description("Max videos per day").category("REWARD").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("reward.ima-ad-tag-url").settingValue("https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=")
+                .description("IMA SDK ad tag URL").category("REWARD").build());
+
+        // Stripe settings
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("stripe.api-key-publishable").settingValue("")
+                .description("Stripe publishable key (pk_test_...)").category("STRIPE").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("stripe.api-key-secret").settingValue("")
+                .description("Stripe secret key (sk_test_...)").category("STRIPE").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("stripe.webhook-secret").settingValue("")
+                .description("Stripe webhook signing secret (whsec_...)").category("STRIPE").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("stripe.adfree-7d-price-id").settingValue("")
+                .description("Stripe Price ID for 7-day ad-free pass").category("STRIPE").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("stripe.adfree-30d-price-id").settingValue("")
+                .description("Stripe Price ID for 30-day ad-free pass").category("STRIPE").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("stripe.currency").settingValue("usd")
+                .description("Default currency for Stripe payments").category("STRIPE").build());
+
+        // Donation settings
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("donation.one-time-amounts").settingValue("5,10,25,50")
+                .description("Suggested one-time donation amounts (USD)").category("DONATION").build());
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("donation.recurring-amounts").settingValue("3,5,10")
+                .description("Suggested monthly recurring amounts (USD)").category("DONATION").build());
+
+        log.info("Monetization settings initialized (all feature flags OFF)");
     }
 }

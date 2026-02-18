@@ -39,6 +39,7 @@ public class BookmarkResponseDto {
     private boolean privatePost;
     private List<PhotoResponseDto> photos;
     private String leadPhotoUrl;
+    private boolean ownerSupporter;
 
     public static BookmarkResponseDto from(Bookmark bookmark) {
         List<PhotoResponseDto> photoDtos = (bookmark.getPhotos() != null && !bookmark.getPhotos().isEmpty())
@@ -75,6 +76,7 @@ public class BookmarkResponseDto {
                 .privatePost(bookmark.isPrivatePost())
                 .photos(photoDtos)
                 .leadPhotoUrl(leadPhoto)
+                .ownerSupporter(bookmark.getUser() != null && bookmark.getUser().isSupporter())
                 .build();
     }
 }

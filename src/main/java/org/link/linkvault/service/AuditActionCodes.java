@@ -70,4 +70,13 @@ public final class AuditActionCodes {
     public static final String BOOKMARK_SOFT_DELETE = "SOFT_DELETE_BOOKMARK";
     public static final String BOOKMARK_RESTORE = "RESTORE_BOOKMARK";
     public static final String BOOKMARK_PURGE = "PURGE_BOOKMARK";
+
+    // Monetization
+    public static final String AD_FREE_PURCHASE = "AD_FREE_PURCHASE";
+    public static final String AD_FREE_REFUND = "AD_FREE_REFUND";
+    public static final String REWARD_REDEEM = "REWARD_REDEEM";
+    public static final String DONATION_CREATE = "DONATION_CREATE";
+    public static final String DONATION_REFUND = "DONATION_REFUND";
+    public static final String TRANSPARENCY_REPORT_PUBLISH = "TRANSPARENCY_REPORT_PUBLISH";
+    public static final String GUEST_ACCESS_TOGGLE = "GUEST_ACCESS_TOGGLE";
 }

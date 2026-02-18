@@ -22,6 +22,8 @@
             <button class="settings-tab" onclick="switchSettingsTab('notifications')">Notifications</button>
             <button class="settings-tab" onclick="switchSettingsTab('privacy')">Privacy</button>
             <button class="settings-tab" onclick="switchSettingsTab('account')">Account</button>
+            <button class="settings-tab" onclick="switchSettingsTab('subscription')">Subscription</button>
+            <button class="settings-tab" onclick="switchSettingsTab('support')">Support</button>
         </div>
 
         <!-- Appearance Tab -->
@@ -112,6 +114,95 @@
             </div>
         </div>
 
+        <!-- Subscription Tab -->
+        <div id="tab-subscription" class="settings-panel">
+            <div class="settings-card">
+                <h3>Ad-Free Experience</h3>
+                <p class="settings-desc">If you'd like an ad-free experience, you can choose a pass below. All core features are available regardless of your choice.</p>
+                <div id="passStatus" style="margin: 12px 0;"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 400px;">
+                    <div class="donation-amount-card" onclick="purchasePass('PURCHASE_7D')">
+                        <div style="font-size: 1.2rem; font-weight: 700;">7-Day Pass</div>
+                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">Ad-free for a week</div>
+                    </div>
+                    <div class="donation-amount-card" onclick="purchasePass('PURCHASE_30D')">
+                        <div style="font-size: 1.2rem; font-weight: 700;">30-Day Pass</div>
+                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">Ad-free for a month</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card" style="margin-top: 16px;">
+                <h3>Reward Points</h3>
+                <p class="settings-desc">Earn points by watching short videos, then redeem them for ad-free hours.</p>
+                <div id="rewardStatus" style="margin: 12px 0;">
+                    <span class="reward-points-indicator" id="rewardBalance">Loading...</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-outline reward-video-btn" onclick="requestRewardVideo()">
+                        &#127916; Watch a Video
+                    </button>
+                    <button class="btn btn-primary" id="redeemBtn" onclick="redeemPoints()" disabled>
+                        Redeem for Ad-Free Hours
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-card" style="margin-top: 16px;">
+                <p style="font-size: 0.8rem; color: var(--text-muted);">
+                    <a href="/policies/refund-policy" style="color: var(--text-muted); text-decoration: underline;">Refund &amp; Cancellation Policy</a>
+                    &middot;
+                    <a href="/policies/ad-policy" style="color: var(--text-muted); text-decoration: underline;">Our Approach to Ads</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Support Tab -->
+        <div id="tab-support" class="settings-panel">
+            <div class="settings-card">
+                <h3>Help Keep LinkVault Running</h3>
+                <p class="settings-desc">Your support covers server hosting, development, and community operations. Every contribution helps keep this service available for everyone.</p>
+
+                <div class="donation-type-toggle">
+                    <button class="donation-type-btn active" onclick="switchDonationType('one-time', this)">One-time</button>
+                    <button class="donation-type-btn" onclick="switchDonationType('recurring', this)">Monthly</button>
+                </div>
+
+                <div id="donation-one-time" class="donation-amount-grid">
+                    <div th:each="amt : ${donationOneTimeAmounts}"
+                         class="donation-amount-card"
+                         th:attr="onclick='selectDonationAmount(this, ' + ${amt * 100} + ')'"
+                         th:text="'$' + ${amt}">$5</div>
+                </div>
+
+                <div id="donation-recurring" class="donation-amount-grid" style="display:none;">
+                    <div th:each="amt : ${donationRecurringAmounts}"
+                         class="donation-amount-card"
+                         th:attr="onclick='selectDonationAmount(this, ' + ${amt * 100} + ')'"
+                         th:text="'$' + ${amt} + '/mo'">$3/mo</div>
+                </div>
+
+                <div class="form-group" style="margin-top: 8px;">
+                    <label for="customAmount">Or enter a custom amount ($)</label>
+                    <input type="number" id="customAmount" class="form-control" placeholder="0" min="1" style="max-width: 200px;"
+                           oninput="selectCustomDonation()"/>
+                </div>
+
+                <button class="btn btn-primary" id="donateBtn" onclick="submitDonation()" disabled>
+                    Support LinkVault
+                </button>
+
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 12px;">
+                    <a href="/policies/payment-policy" style="color: var(--text-muted); text-decoration: underline;">Payment &amp; Refund Policy</a>
+                </p>
+            </div>
+
+            <div id="donationHistory" class="settings-card" style="margin-top: 16px; display: none;">
+                <h3>Your Support History</h3>
+                <div id="donationHistoryList"></div>
+            </div>
+        </div>
+
         <!-- Account Tab -->
         <div id="tab-account" class="settings-panel">
             <div class="settings-card">
@@ -167,6 +258,7 @@
 
 <div th:replace="~{fragments/layout :: searchModal}"></div>
 <script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/rewarded-video.js}"></script>
 <script>
 function switchSettingsTab(tabName) {
     document.querySelectorAll('.settings-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -246,6 +338,143 @@ function changePassword(e) {
     })
     .catch(function(err) { showToast(err.message || 'Error changing password', 'error'); });
 }
+
+// === Subscription / Ad-Free Pass ===
+function purchasePass(type) {
+    fetch('/api/payment/checkout', {
+        method: 'POST',
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ passType: type })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function(data) { window.location.href = data.url; })
+    .catch(function(err) { showToast(err.message || 'Error creating checkout', 'error'); });
+}
+
+function loadPassStatus() {
+    fetch('/api/payment/pass-status', { headers: csrfHeaders({}) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var el = document.getElementById('passStatus');
+        if (data.isAdFree && data.passes.length > 0) {
+            var p = data.passes[0];
+            el.innerHTML = '<div style="background:var(--success);color:#fff;padding:8px 14px;border-radius:6px;display:inline-block;font-size:0.87rem;">' +
+                'Ad-Free Pass Active &mdash; expires ' + new Date(p.expiresAt).toLocaleDateString() + '</div>';
+        } else {
+            el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No active pass. Choose one below if you\'d like.</p>';
+        }
+    })
+    .catch(function() {});
+}
+
+// === Reward Points ===
+function loadRewardStatus() {
+    fetch('/api/reward/status', { headers: csrfHeaders({}) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('rewardBalance').textContent = data.points + ' points (' + data.dailyVideosRemaining + ' videos remaining today)';
+        var btn = document.getElementById('redeemBtn');
+        if (data.points >= data.adFreeHoursCost) {
+            btn.disabled = false;
+            btn.textContent = 'Redeem ' + data.adFreeHoursCost + ' pts for ' + (data.adFreeHoursDuration || 2) + 'h Ad-Free';
+        } else {
+            btn.disabled = true;
+            btn.textContent = 'Need ' + data.adFreeHoursCost + ' pts to redeem';
+        }
+    })
+    .catch(function() { document.getElementById('rewardBalance').textContent = 'Reward system not available'; });
+}
+
+// requestRewardVideo() is defined in rewarded-video.js (IMA SDK integration)
+
+function completeRewardVideo(nonce) {
+    fetch('/api/reward/video-complete', {
+        method: 'POST',
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ nonce: nonce })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        showToast('Earned ' + data.pointsEarned + ' points! Balance: ' + data.newBalance);
+        loadRewardStatus();
+    })
+    .catch(function() { showToast('Error completing video', 'error'); });
+}
+
+function redeemPoints() {
+    fetch('/api/reward/redeem', {
+        method: 'POST',
+        headers: csrfHeaders({ 'Content-Type': 'application/json' })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function(data) {
+        showToast('Ad-free for ' + ((data.pass && data.pass.expiresAt) ? 'the next few hours' : 'a while') + '! Balance: ' + data.newBalance);
+        loadRewardStatus();
+        loadPassStatus();
+    })
+    .catch(function(err) { showToast(err.message || 'Error redeeming', 'error'); });
+}
+
+// === Donations ===
+var selectedDonationAmount = 0;
+var currentDonationType = 'ONE_TIME';
+
+function switchDonationType(type, btn) {
+    document.querySelectorAll('.donation-type-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentDonationType = type === 'recurring' ? 'RECURRING' : 'ONE_TIME';
+    document.getElementById('donation-one-time').style.display = type === 'one-time' ? '' : 'none';
+    document.getElementById('donation-recurring').style.display = type === 'recurring' ? '' : 'none';
+    selectedDonationAmount = 0;
+    document.querySelectorAll('.donation-amount-card').forEach(function(c) { c.classList.remove('selected'); });
+    document.getElementById('donateBtn').disabled = true;
+}
+
+function selectDonationAmount(el, cents) {
+    document.querySelectorAll('.donation-amount-card').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    selectedDonationAmount = cents;
+    document.getElementById('customAmount').value = '';
+    document.getElementById('donateBtn').disabled = false;
+}
+
+function selectCustomDonation() {
+    var val = parseInt(document.getElementById('customAmount').value);
+    if (val > 0) {
+        selectedDonationAmount = val * 100;
+        document.querySelectorAll('.donation-amount-card').forEach(function(c) { c.classList.remove('selected'); });
+        document.getElementById('donateBtn').disabled = false;
+    } else {
+        document.getElementById('donateBtn').disabled = true;
+    }
+}
+
+function submitDonation() {
+    if (selectedDonationAmount <= 0) return;
+    fetch('/api/donation/checkout', {
+        method: 'POST',
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ amountCents: selectedDonationAmount, currency: 'usd', donationType: currentDonationType })
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw err; });
+        return r.json();
+    })
+    .then(function(data) { window.location.href = data.url; })
+    .catch(function(err) { showToast(err.message || 'Error', 'error'); });
+}
+
+// Load statuses on tab switch
+document.addEventListener('DOMContentLoaded', function() {
+    loadPassStatus();
+    loadRewardStatus();
+});
 
 function changeEmail(e) {
     e.preventDefault();

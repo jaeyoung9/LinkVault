@@ -45,6 +45,11 @@ public class AdminApiController {
     private final ReportService reportService;
     private final SystemSettingsService systemSettingsService;
     private final FileVaultService fileVaultService;
+    private final TransparencyReportService transparencyReportService;
+    private final MonetizationStatsService monetizationStatsService;
+    private final GuestEventService guestEventService;
+    private final StripeService stripeService;
+    private final org.link.linkvault.repository.AdFreePassRepository adFreePassRepository;
 
     // --- User CRUD ---
 
@@ -524,5 +529,97 @@ public class AdminApiController {
             fileVaultService.reloadSettings();
         }
         return ResponseEntity.ok(SystemSettingsResponseDto.from(updated));
+    }
+
+    // --- Transparency Report Management ---
+
+    @GetMapping("/transparency-reports")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<Page<TransparencyReportResponseDto>> getTransparencyReports(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok(transparencyReportService.findAll(PageRequest.of(page, size)));
+    }
+
+    @PostMapping("/transparency-reports")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<TransparencyReportResponseDto> createTransparencyReport(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody TransparencyReportRequestDto dto) {
+        User creator = userService.getUserEntity(userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(transparencyReportService.create(dto, creator));
+    }
+
+    @PutMapping("/transparency-reports/{id}")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<TransparencyReportResponseDto> updateTransparencyReport(
+            @PathVariable Long id,
+            @Valid @RequestBody TransparencyReportRequestDto dto) {
+        return ResponseEntity.ok(transparencyReportService.update(id, dto));
+    }
+
+    @PatchMapping("/transparency-reports/{id}/publish")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<Map<String, String>> publishTransparencyReport(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        transparencyReportService.publish(id, userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Report published"));
+    }
+
+    @PatchMapping("/transparency-reports/{id}/unpublish")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<Map<String, String>> unpublishTransparencyReport(@PathVariable Long id) {
+        transparencyReportService.unpublish(id);
+        return ResponseEntity.ok(Map.of("message", "Report unpublished"));
+    }
+
+    @DeleteMapping("/transparency-reports/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Void> deleteTransparencyReport(
+            @PathVariable Long id) {
+        transparencyReportService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Monetization Stats ---
+
+    @GetMapping("/monetization/stats")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<MonetizationStatsDto> getMonetizationStats() {
+        return ResponseEntity.ok(monetizationStatsService.getStats());
+    }
+
+    // --- Guest Funnel Analytics ---
+
+    @GetMapping("/guest-analytics/funnel")
+    @PreAuthorize("hasAuthority('VIEW_MONETIZATION')")
+    public ResponseEntity<GuestFunnelStatsDto> getGuestFunnel(
+            @RequestParam(defaultValue = "90") int days) {
+        java.time.LocalDateTime from = java.time.LocalDateTime.now().minusDays(days);
+        java.time.LocalDateTime to = java.time.LocalDateTime.now();
+        return ResponseEntity.ok(guestEventService.getFunnelStats(from, to));
+    }
+
+    // --- Payment Management ---
+
+    @GetMapping("/payments")
+    @PreAuthorize("hasAuthority('MANAGE_PAYMENTS')")
+    public ResponseEntity<Page<AdFreePassResponseDto>> getPayments(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        Page<AdFreePassResponseDto> passes = adFreePassRepository
+                .findAllWithUser(PageRequest.of(page, size))
+                .map(AdFreePassResponseDto::from);
+        return ResponseEntity.ok(passes);
+    }
+
+    @PostMapping("/payments/{paymentIntentId}/refund")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> refundPayment(
+            @PathVariable String paymentIntentId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        stripeService.refundPayment(paymentIntentId);
+        return ResponseEntity.ok(Map.of("message", "Refund initiated for " + paymentIntentId));
     }
 }

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Refund Policy - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div style="max-width: 700px; margin: 0 auto; padding: 40px 20px;">
+    <a href="/" style="color: var(--text-muted); font-size: 0.85rem;">&larr; Back to LinkVault</a>
+    <h1 style="margin-top: 12px;">Refund &amp; Cancellation Policy</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">Last updated: February 2026</p>
+
+    <div class="settings-card">
+        <h3>Ad-Free Pass Refunds</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li>You may request a full refund within 24 hours of purchasing a 7-day or 30-day Ad-Free Pass.</li>
+            <li>After 24 hours, refunds are issued on a case-by-case basis for technical issues or accidental purchases.</li>
+            <li>If you experience a malfunction where ads continue to display despite an active pass, contact support for a resolution or refund.</li>
+            <li>Duplicate charges are automatically detected. If you believe you were charged twice, contact us and we will investigate and refund promptly.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Donation Refunds</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li>One-time donations can be refunded within 7 days of the transaction.</li>
+            <li>Recurring donations can be cancelled at any time from your Settings page. No further charges will be applied after cancellation.</li>
+            <li>Partial-month refunds for recurring donations are not provided, but you will retain access to supporter benefits through the end of the current billing period.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Failed Payments</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li>If a payment fails, no charge is applied and no pass or donation is recorded.</li>
+            <li>For recurring subscriptions, Stripe will retry failed payments up to 3 times over 7 days before cancelling the subscription.</li>
+            <li>You will receive an email notification if a recurring payment fails.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">How to Request a Refund</h3>
+        <p style="color: var(--text-secondary);">
+            To request a refund, please contact us through the support channels available in your Settings page.
+            Include your username and the approximate date of the transaction. We aim to process refund requests within 3-5 business days.
+        </p>
+    </div>
+</div>
+</body>
+</html>

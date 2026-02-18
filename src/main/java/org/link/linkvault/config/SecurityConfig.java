@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -43,6 +44,16 @@ public class SecurityConfig {
             .authorizeRequests()
                 .antMatchers("/css/**", "/js/**", "/files/**", "/login", "/register", "/error").permitAll()
                 .antMatchers("/api/auth/register", "/api/auth/validate-code", "/api/auth/privacy-policy").permitAll()
+                // Guest access: read-only pages
+                .antMatchers(HttpMethod.GET, "/", "/map", "/bookmark/**", "/search", "/tag/**",
+                        "/qna", "/qna/**", "/announcements", "/announcements/**",
+                        "/transparency", "/transparency/**",
+                        "/policies/**").permitAll()
+                // Guest event tracking + ad feedback
+                .antMatchers(HttpMethod.POST, "/api/guest/event").permitAll()
+                .antMatchers(HttpMethod.POST, "/api/ad/hide").permitAll()
+                // Stripe webhook (no auth, verified by signature)
+                .antMatchers(HttpMethod.POST, "/api/stripe/webhook").permitAll()
                 .antMatchers("/api/auth/privacy-consent").authenticated()
                 .antMatchers("/admin/**", "/api/admin/**").hasAnyRole("SUPER_ADMIN", "COMMUNITY_ADMIN", "MODERATOR")
                 .antMatchers("/h2-console/**").hasAnyRole("SUPER_ADMIN", "COMMUNITY_ADMIN")
@@ -59,7 +70,8 @@ public class SecurityConfig {
             .and()
             .csrf()
                 .ignoringAntMatchers("/api/auth/register", "/api/auth/validate-code",
-                                     "/api/auth/privacy-policy", "/h2-console/**")
+                                     "/api/auth/privacy-policy", "/h2-console/**",
+                                     "/api/guest/**", "/api/ad/**", "/api/stripe/**")
             .and()
             .headers()
                 .frameOptions().sameOrigin();

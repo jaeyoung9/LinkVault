@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Payment Policy - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div style="max-width: 700px; margin: 0 auto; padding: 40px 20px;">
+    <a href="/" style="color: var(--text-muted); font-size: 0.85rem;">&larr; Back to LinkVault</a>
+    <h1 style="margin-top: 12px;">Payment &amp; Refund Policy</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">Last updated: February 2026</p>
+
+    <div class="settings-card">
+        <h3>Ad-Free Pass</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li><strong>7-Day Pass</strong>: Removes all ads for 7 days from the time of purchase.</li>
+            <li><strong>30-Day Pass</strong>: Removes all ads for 30 days from the time of purchase.</li>
+            <li>All core features remain fully available regardless of pass status.</li>
+            <li>The system prevents purchasing a new pass while an active pass exists.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Donations</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li><strong>One-time</strong>: Suggested amounts of $5, $10, $25, $50 (custom amount also available).</li>
+            <li><strong>Recurring</strong>: Suggested monthly amounts of $3, $5, $10 (custom amount also available). Cancel anytime from your Settings page.</li>
+            <li>Supporter badge is awarded after any completed donation and persists even after cancellation.</li>
+            <li>No features are gated behind supporter status &mdash; the badge is symbolic.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Refund Eligibility</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li>Ad-Free Pass: Full refund within 24 hours. After that, case-by-case for technical issues.</li>
+            <li>One-time donations: Refundable within 7 days.</li>
+            <li>Recurring donations: Cancel anytime; no partial-month refund, but benefits continue through the billing period.</li>
+            <li>Duplicate charges are automatically detected. Contact support if you believe you were charged twice.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Failed Payments</h3>
+        <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li>No charge is applied on payment failure. No pass or donation is recorded until payment is confirmed.</li>
+            <li>For recurring subscriptions, failed payments are retried up to 3 times over 7 days before cancellation.</li>
+            <li>You will receive an email notification if a recurring payment fails.</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Payment Processing</h3>
+        <p style="color: var(--text-secondary); line-height: 1.8;">
+            All payments are processed securely through Stripe. LinkVault does not store your card details.
+            For payment-related issues, contact us through the support channels in your Settings page.
+            Include your username and the approximate date of the transaction. We aim to respond within 3-5 business days.
+        </p>
+    </div>
+
+    <div style="margin-top: 16px;">
+        <a href="/policies/refund-policy" style="color: var(--text-muted); font-size: 0.85rem;">See also: Refund &amp; Cancellation Policy</a>
+    </div>
+</div>
+</body>
+</html>

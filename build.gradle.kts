@@ -39,6 +39,9 @@ dependencies {
     // Metadata extraction (URL title, description, favicon)
     implementation("org.jsoup:jsoup:1.17.2")
 
+    // Stripe payment processing
+    implementation("com.stripe:stripe-java:24.3.0")
+
     // Database
     runtimeOnly("com.h2database:h2")
 

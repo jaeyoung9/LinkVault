@@ -8,7 +8,7 @@
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 </head>
-<body>
+<body th:attr="data-guest=${isGuest != null and isGuest} ? 'true' : 'false'">
 <div class="app-layout">
     <div th:replace="~{fragments/layout :: sidebar}"></div>
 
@@ -20,12 +20,17 @@
                     <input type="text" name="keyword" class="search-input" placeholder="Search posts..."/>
                     <button type="submit" class="btn btn-primary">Search</button>
                 </form>
-                <button class="btn btn-primary" onclick="openAddModal()">+ Share a Story</button>
+                <button th:if="${currentUser != null}" class="btn btn-primary" onclick="openAddModal()">+ Share a Story</button>
             </div>
         </div>
 
-        <!-- Frequently Accessed -->
-        <div th:if="${frequent != null and !frequent.isEmpty()}" class="frequent-bar">
+        <!-- Guest Banner (top of feed) -->
+        <th:block th:if="${isGuest}">
+            <div th:replace="~{fragments/guest-banner :: guestBanner}"></div>
+        </th:block>
+
+        <!-- Frequently Accessed (members only) -->
+        <div th:if="${currentUser != null and frequent != null and !frequent.isEmpty()}" class="frequent-bar">
             <th:block th:each="b : ${frequent}">
                 <a th:href="@{'/bookmark/' + ${b.id}}" class="frequent-chip">
                     <img th:if="${b.leadPhotoUrl != null}" th:src="${b.leadPhotoUrl}" alt="" onerror="this.style.display='none'" style="width:24px;height:24px;border-radius:4px;object-fit:cover;"/>
@@ -37,7 +42,11 @@
 
         <!-- Post Grid -->
         <div class="post-grid" th:if="${bookmarks != null and bookmarks.totalElements > 0}">
-            <th:block th:each="bookmark : ${bookmarks.content}">
+            <th:block th:each="bookmark, iter : ${bookmarks.content}">
+                <!-- Insert ad card before the post if this position is an ad slot -->
+                <th:block th:if="${adPositions != null and adPositions.contains(iter.index)}">
+                    <div th:replace="~{fragments/ad-card :: adCard}"></div>
+                </th:block>
                 <div th:replace="~{fragments/layout :: postCard(${bookmark})}"></div>
             </th:block>
         </div>
@@ -54,8 +63,13 @@
 <div th:replace="~{fragments/layout :: postComposeModal}"></div>
 <div th:replace="~{fragments/layout :: folderModal}"></div>
 <div th:replace="~{fragments/layout :: searchModal}"></div>
+<!-- AdSense (conditional) -->
+<script th:if="${adsEnabled and adsenseClientId != null and !adsenseClientId.isEmpty()}"
+        th:src="'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + ${adsenseClientId}"
+        async="async" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script th:src="@{/js/map.js}"></script>
 <script th:src="@{/js/app.js}"></script>
+<script th:if="${adsEnabled}" th:src="@{/js/ad-manager.js}"></script>
 </body>
 </html>

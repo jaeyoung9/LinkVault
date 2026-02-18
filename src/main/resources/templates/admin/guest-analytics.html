@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Guest Analytics - Admin - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Guest Analytics</h2>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Period:</span>
+                <a th:href="@{/admin/guest-analytics(days=7)}" class="btn btn-sm"
+                   th:classappend="${days == 7} ? 'active' : ''">7 days</a>
+                <a th:href="@{/admin/guest-analytics(days=30)}" class="btn btn-sm"
+                   th:classappend="${days == 30} ? 'active' : ''">30 days</a>
+                <a th:href="@{/admin/guest-analytics(days=90)}" class="btn btn-sm"
+                   th:classappend="${days == 90} ? 'active' : ''">90 days</a>
+            </div>
+        </div>
+
+        <!-- Funnel Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${funnel.pageViews}">0</div>
+                <div class="stat-label">Guest Sessions (Page Views)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${funnel.adShown}">0</div>
+                <div class="stat-label">Sessions with Ads</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${funnel.signupStarted}">0</div>
+                <div class="stat-label">Signup Started</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${funnel.signupCompleted}">0</div>
+                <div class="stat-label">Signup Completed</div>
+            </div>
+        </div>
+
+        <!-- Funnel Visualization -->
+        <div class="charts-grid" style="margin-top: 24px;">
+            <div class="chart-card" style="grid-column: 1 / -1;">
+                <h3>Conversion Funnel (Last <span th:text="${days}">90</span> days)</h3>
+                <canvas id="funnelChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Conversion Rates -->
+        <div class="charts-grid" style="margin-top: 24px;">
+            <div class="chart-card">
+                <h3>Conversion Rates</h3>
+                <table style="width: 100%; font-size: 0.9rem;">
+                    <tbody>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--text-secondary);">Page View → Ad Shown</td>
+                        <td style="padding: 8px 0; text-align: right;"
+                            th:text="${funnel.pageViews > 0 ? #numbers.formatDecimal(funnel.adShown * 100.0 / funnel.pageViews, 1, 1) + '%' : 'N/A'}">0%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--text-secondary);">Ad Shown → Ad Clicked</td>
+                        <td style="padding: 8px 0; text-align: right;"
+                            th:text="${funnel.adShown > 0 ? #numbers.formatDecimal(funnel.adClicked * 100.0 / funnel.adShown, 1, 1) + '%' : 'N/A'}">0%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--text-secondary);">Page View → Signup Started</td>
+                        <td style="padding: 8px 0; text-align: right;"
+                            th:text="${funnel.pageViews > 0 ? #numbers.formatDecimal(funnel.signupStarted * 100.0 / funnel.pageViews, 1, 1) + '%' : 'N/A'}">0%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--text-secondary);">Signup Started → Completed</td>
+                        <td style="padding: 8px 0; text-align: right;"
+                            th:text="${funnel.signupStarted > 0 ? #numbers.formatDecimal(funnel.signupCompleted * 100.0 / funnel.signupStarted, 1, 1) + '%' : 'N/A'}">0%</td>
+                    </tr>
+                    <tr style="border-top: 1px solid var(--border); font-weight: bold;">
+                        <td style="padding: 8px 0;">Overall: Page View → Signup</td>
+                        <td style="padding: 8px 0; text-align: right; color: var(--primary);"
+                            th:text="${funnel.pageViews > 0 ? #numbers.formatDecimal(funnel.signupCompleted * 100.0 / funnel.pageViews, 1, 2) + '%' : 'N/A'}">0%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="chart-card">
+                <h3>Ad Feedback</h3>
+                <table style="width: 100%; font-size: 0.9rem;">
+                    <tbody>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--text-secondary);">Sessions with Ad Hidden</td>
+                        <td style="padding: 8px 0; text-align: right;" th:text="${funnel.adHidden}">0</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--text-secondary);">Hide Rate (of shown)</td>
+                        <td style="padding: 8px 0; text-align: right;"
+                            th:text="${funnel.adShown > 0 ? #numbers.formatDecimal(funnel.adHidden * 100.0 / funnel.adShown, 1, 1) + '%' : 'N/A'}">0%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const funnel = {
+        pageViews: /*[[${funnel.pageViews}]]*/ 0,
+        adShown: /*[[${funnel.adShown}]]*/ 0,
+        adClicked: /*[[${funnel.adClicked}]]*/ 0,
+        adHidden: /*[[${funnel.adHidden}]]*/ 0,
+        signupStarted: /*[[${funnel.signupStarted}]]*/ 0,
+        signupCompleted: /*[[${funnel.signupCompleted}]]*/ 0
+    };
+    /*]]>*/
+
+    Chart.defaults.color = '#94a3b8';
+
+    new Chart(document.getElementById('funnelChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Page Views', 'Ads Shown', 'Ads Clicked', 'Signup Started', 'Signup Completed'],
+            datasets: [{
+                label: 'Sessions',
+                data: [funnel.pageViews, funnel.adShown, funnel.adClicked, funnel.signupStarted, funnel.signupCompleted],
+                backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#334155' } },
+                x: { grid: { color: '#334155' } }
+            }
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Monetization - Admin - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Monetization Dashboard</h2>
+        </div>
+
+        <!-- Revenue Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" th:text="'$' + ${#numbers.formatDecimal(stats.totalRevenueCents / 100.0, 1, 2)}">$0.00</div>
+                <div class="stat-label">Total Revenue (90 days)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.activePasses}">0</div>
+                <div class="stat-label">Active Ad-Free Passes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.totalDonations}">0</div>
+                <div class="stat-label">Total Donations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats.guestConversionRate} + '%'">0%</div>
+                <div class="stat-label">Guest Conversion Rate</div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="charts-grid" style="margin-top: 24px;">
+            <div class="chart-card">
+                <h3>Payment Management</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">View and manage ad-free passes and refunds.</p>
+                <div id="payments-list" style="max-height: 400px; overflow-y: auto;">
+                    <p style="color: var(--text-muted);">Loading payments...</p>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Quick Actions</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <a href="/admin/guest-analytics" class="btn" style="text-align: center;">Guest Analytics</a>
+                    <a href="/admin/transparency-reports" class="btn" style="text-align: center;">Transparency Reports</a>
+                    <a href="/admin/settings" class="btn" style="text-align: center;">System Settings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrf = document.querySelector('meta[name="_csrf"]');
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrf && csrfHeader) {
+        headers[csrfHeader.content] = csrf.content;
+    }
+
+    fetch('/api/admin/payments?size=10', { headers: headers })
+        .then(r => r.json())
+        .then(data => {
+            const list = document.getElementById('payments-list');
+            const passes = data.content || [];
+            if (passes.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-muted);">No payments yet.</p>';
+                return;
+            }
+            let html = '<table style="width: 100%; font-size: 0.85rem;"><thead><tr><th>User</th><th>Type</th><th>Status</th><th>Expires</th><th>Action</th></tr></thead><tbody>';
+            passes.forEach(function(p) {
+                const status = p.refunded ? 'Refunded' : (p.active ? 'Active' : 'Expired');
+                const statusColor = p.refunded ? 'var(--warning)' : (p.active ? 'var(--success)' : 'var(--text-muted)');
+                html += '<tr>';
+                html += '<td>' + (p.username || 'N/A') + '</td>';
+                html += '<td>' + p.type + '</td>';
+                html += '<td style="color: ' + statusColor + ';">' + status + '</td>';
+                html += '<td>' + (p.expiresAt ? new Date(p.expiresAt).toLocaleDateString() : '-') + '</td>';
+                html += '<td>';
+                if (p.active && !p.refunded && p.stripePaymentIntentId) {
+                    html += '<button onclick="refundPayment(\'' + p.stripePaymentIntentId + '\')" class="btn btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Refund</button>';
+                } else {
+                    html += '-';
+                }
+                html += '</td></tr>';
+            });
+            html += '</tbody></table>';
+            list.innerHTML = html;
+        })
+        .catch(function() {
+            document.getElementById('payments-list').innerHTML = '<p style="color: var(--text-muted);">Failed to load payments.</p>';
+        });
+});
+
+function refundPayment(paymentIntentId) {
+    if (!confirm('Are you sure you want to refund this payment?')) return;
+    const csrf = document.querySelector('meta[name="_csrf"]');
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrf && csrfHeader) {
+        headers[csrfHeader.content] = csrf.content;
+    }
+    fetch('/api/admin/payments/' + paymentIntentId + '/refund', {
+        method: 'POST', headers: headers
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        alert(data.message || 'Refund processed');
+        location.reload();
+    })
+    .catch(function() { alert('Refund failed'); });
+}
+</script>
+</body>
+</html>

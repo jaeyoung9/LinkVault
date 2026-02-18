@@ -7,6 +7,7 @@ import org.link.linkvault.dto.PrivacyPolicyResponseDto;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.service.*;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import org.link.linkvault.entity.Role;
 
+import java.util.Collections;
 import java.util.List;
 
 @Controller
@@ -34,9 +36,25 @@ public class WebController {
     private final AnnouncementService announcementService;
     private final UserSettingsService userSettingsService;
     private final PrivacyPolicyService privacyPolicyService;
+    private final SystemSettingsService systemSettingsService;
+    private final AdPolicyService adPolicyService;
+
+    private boolean isGuestAccessEnabled() {
+        return systemSettingsService.getValue("feature.guest-access-enabled")
+                .map("true"::equals).orElse(false);
+    }
+
+    private void populateGuestModel(Model model) {
+        model.addAttribute("folders", Collections.emptyList());
+        model.addAttribute("tags", tagService.findAll());
+        model.addAttribute("currentUser", null);
+        model.addAttribute("isAdmin", false);
+        model.addAttribute("isGuest", true);
+    }
 
     @GetMapping("/login")
-    public String login() {
+    public String login(Model model) {
+        model.addAttribute("guestAccessEnabled", isGuestAccessEnabled());
         return "login";
     }
 
@@ -74,10 +92,23 @@ public class WebController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Model model) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            Page<BookmarkResponseDto> bookmarks = bookmarkService.findAllPublic(pageable);
+            populateGuestModel(model);
+            populateAdModel(model, null, bookmarks.getNumberOfElements());
+            model.addAttribute("bookmarks", bookmarks);
+            model.addAttribute("pageTitle", "Feed");
+            model.addAttribute("frequent", Collections.emptyList());
+            return "index";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
-        Page<BookmarkResponseDto> bookmarks = bookmarkService.findAll(currentUser,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<BookmarkResponseDto> bookmarks = bookmarkService.findAll(currentUser, pageable);
         populateCommonModel(model, currentUser);
+        populateAdModel(model, currentUser, bookmarks.getNumberOfElements());
         model.addAttribute("bookmarks", bookmarks);
         model.addAttribute("pageTitle", "Feed");
         model.addAttribute("frequent", bookmarkService.findFrequentlyAccessed(currentUser, 5));
@@ -102,6 +133,16 @@ public class WebController {
     public String tagView(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String tagName, Model model) {
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            List<BookmarkResponseDto> bookmarks = bookmarkService.findByTagNamePublic(tagName);
+            populateGuestModel(model);
+            model.addAttribute("bookmarkList", bookmarks);
+            model.addAttribute("currentTag", tagName);
+            model.addAttribute("pageTitle", "Tag: " + tagName);
+            return "tag";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         List<BookmarkResponseDto> bookmarks = bookmarkService.findByTagName(currentUser, tagName);
         populateCommonModel(model, currentUser);
@@ -118,9 +159,20 @@ public class WebController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Model model) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            Page<BookmarkResponseDto> results = bookmarkService.searchByKeywordPublic(keyword, pageable);
+            populateGuestModel(model);
+            model.addAttribute("bookmarks", results);
+            model.addAttribute("keyword", keyword);
+            model.addAttribute("pageTitle", "Search: " + keyword);
+            return "search";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
-        Page<BookmarkResponseDto> results = bookmarkService.searchByKeyword(currentUser, keyword,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<BookmarkResponseDto> results = bookmarkService.searchByKeyword(currentUser, keyword, pageable);
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmarks", results);
         model.addAttribute("keyword", keyword);
@@ -132,13 +184,22 @@ public class WebController {
     public String bookmarkDetail(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id, Model model) {
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            BookmarkResponseDto bookmark = bookmarkService.findByIdPublic(id);
+            populateGuestModel(model);
+            model.addAttribute("bookmark", bookmark);
+            model.addAttribute("pageTitle", bookmark.getTitle());
+            model.addAttribute("currentUserId", null);
+            return "bookmark";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         BookmarkResponseDto bookmark = bookmarkService.findById(id, currentUser);
 
         populateCommonModel(model, currentUser);
         model.addAttribute("bookmark", bookmark);
         model.addAttribute("pageTitle", bookmark.getTitle());
-
         model.addAttribute("currentUserId", currentUser.getId());
         return "bookmark";
     }
@@ -147,6 +208,13 @@ public class WebController {
     public String mapDiscovery(
             @AuthenticationPrincipal UserDetails userDetails,
             Model model) {
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            populateGuestModel(model);
+            model.addAttribute("pageTitle", "Map Discover");
+            return "map";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         populateCommonModel(model, currentUser);
         model.addAttribute("pageTitle", "Map Discover");
@@ -181,8 +249,14 @@ public class WebController {
             @RequestParam(required = false) String keyword,
             Model model,
             @AuthenticationPrincipal UserDetails userDetails) {
-        User currentUser = userService.getUserEntity(userDetails.getUsername());
-        populateCommonModel(model, currentUser);
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            populateGuestModel(model);
+        } else {
+            User currentUser = userService.getUserEntity(userDetails.getUsername());
+            populateCommonModel(model, currentUser);
+        }
+
         model.addAttribute("categories", qnaArticleService.getPublishedCategories());
         if (keyword != null && !keyword.isBlank()) {
             model.addAttribute("articles", qnaArticleService.searchPublished(keyword, PageRequest.of(0, 50)).getContent());
@@ -200,6 +274,15 @@ public class WebController {
     @GetMapping("/qna/{id}")
     public String qnaDetail(@PathVariable Long id, Model model,
                             @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            populateGuestModel(model);
+            model.addAttribute("article", qnaArticleService.findPublishedById(id));
+            model.addAttribute("feedback", null);
+            model.addAttribute("pageTitle", "QnA Guide");
+            return "qna-detail";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         populateCommonModel(model, currentUser);
         model.addAttribute("article", qnaArticleService.findPublishedById(id));
@@ -211,6 +294,14 @@ public class WebController {
     @GetMapping("/announcements")
     public String announcements(Model model,
                                 @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            populateGuestModel(model);
+            model.addAttribute("announcements", Collections.emptyList());
+            model.addAttribute("pageTitle", "Announcements");
+            return "announcements";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         populateCommonModel(model, currentUser);
         model.addAttribute("announcements", announcementService.findVisibleForUser(currentUser));
@@ -221,6 +312,14 @@ public class WebController {
     @GetMapping("/announcements/{id}")
     public String announcementDetail(@PathVariable Long id, Model model,
                                      @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            if (!isGuestAccessEnabled()) return "redirect:/login";
+            populateGuestModel(model);
+            model.addAttribute("announcement", null);
+            model.addAttribute("pageTitle", "Announcement");
+            return "announcement-detail";
+        }
+
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         populateCommonModel(model, currentUser);
         announcementService.markAsRead(id, currentUser);
@@ -237,7 +336,43 @@ public class WebController {
         model.addAttribute("settings", userSettingsService.getSettings(currentUser));
         model.addAttribute("userEmail", currentUser.getEmail());
         model.addAttribute("pageTitle", "Settings");
+
+        // Donation amounts from SystemSettings (comma-separated dollar values)
+        String oneTimeRaw = systemSettingsService.getValue("donation.one-time-amounts").orElse("5,10,25,50");
+        String recurringRaw = systemSettingsService.getValue("donation.recurring-amounts").orElse("3,5,10");
+        model.addAttribute("donationOneTimeAmounts", parseAmounts(oneTimeRaw));
+        model.addAttribute("donationRecurringAmounts", parseAmounts(recurringRaw));
         return "settings";
+    }
+
+    private List<Integer> parseAmounts(String csv) {
+        List<Integer> amounts = new java.util.ArrayList<>();
+        for (String s : csv.split(",")) {
+            String trimmed = s.trim();
+            if (!trimmed.isEmpty()) {
+                try {
+                    amounts.add(Integer.parseInt(trimmed));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return amounts;
+    }
+
+    private void populateAdModel(Model model, User currentUser, int totalPosts) {
+        boolean adsEnabled = adPolicyService.isAdsEnabled();
+        boolean isAdFree = currentUser != null && adPolicyService.isAdFree(currentUser);
+        boolean isGuest = currentUser == null;
+        model.addAttribute("adsEnabled", adsEnabled && !isAdFree);
+        model.addAttribute("isAdFree", isAdFree);
+        model.addAttribute("adsenseClientId", adPolicyService.getAdsenseClientId());
+        model.addAttribute("adsenseSlotFeed", adPolicyService.getAdsenseSlotFeed());
+        model.addAttribute("adsenseLayoutKey", adPolicyService.getAdsenseLayoutKey());
+        if (adsEnabled && !isAdFree) {
+            model.addAttribute("adPositions", adPolicyService.getAdInsertionPositions(totalPosts, isGuest, 0));
+        } else {
+            model.addAttribute("adPositions", Collections.emptyList());
+        }
     }
 
     private void populateCommonModel(Model model, User currentUser) {
@@ -248,5 +383,6 @@ public class WebController {
                 || currentUser.getRole() == Role.COMMUNITY_ADMIN
                 || currentUser.getRole() == Role.MODERATOR;
         model.addAttribute("isAdmin", isAdmin);
+        model.addAttribute("isGuest", false);
     }
 }

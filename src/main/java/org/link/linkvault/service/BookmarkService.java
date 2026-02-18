@@ -355,6 +355,30 @@ public class BookmarkService {
                 .collect(Collectors.toList());
     }
 
+    // --- Public access (guest) ---
+
+    public Page<BookmarkResponseDto> findAllPublic(Pageable pageable) {
+        return bookmarkRepository.findAllPublic(pageable)
+                .map(BookmarkResponseDto::from);
+    }
+
+    public BookmarkResponseDto findByIdPublic(Long id) {
+        Bookmark bookmark = bookmarkRepository.findByIdPublic(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found with id: " + id));
+        return BookmarkResponseDto.from(bookmark);
+    }
+
+    public Page<BookmarkResponseDto> searchByKeywordPublic(String keyword, Pageable pageable) {
+        return bookmarkRepository.searchByKeywordPublic(keyword, pageable)
+                .map(BookmarkResponseDto::from);
+    }
+
+    public List<BookmarkResponseDto> findByTagNamePublic(String tagName) {
+        return bookmarkRepository.findByTagNamePublic(tagName).stream()
+                .map(BookmarkResponseDto::from)
+                .collect(Collectors.toList());
+    }
+
     // --- Admin listing (includes private posts) ---
 
     public Page<BookmarkResponseDto> findAllForAdmin(Pageable pageable) {

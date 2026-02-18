@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Thank You - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+    <div class="settings-card" style="max-width: 480px; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 16px;">&#9733;</div>
+        <h2>Thank You for Your Support!</h2>
+        <p style="color: var(--text-secondary); margin: 12px 0 8px;">
+            Your generosity helps keep LinkVault running and improving. You've been awarded a Supporter badge.
+        </p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+            Your support funds server hosting, development, and community operations.
+        </p>
+        <div style="margin-bottom: 20px;">
+            <span class="supporter-badge" style="font-size: 1.5rem;">&#9733;</span>
+            <span style="font-weight: 600; margin-left: 4px;">Supporter</span>
+        </div>
+        <a href="/" class="btn btn-primary">Back to Feed</a>
+        <a href="/settings" class="btn btn-outline" style="margin-left: 8px;">View Settings</a>
+    </div>
+</div>
+</body>
+</html>

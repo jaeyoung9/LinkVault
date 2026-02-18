@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- Native Ad Card Fragment -->
+<div th:fragment="adCard" class="ad-card">
+    <span class="ad-card-label">Sponsored</span>
+    <div class="ad-card-body">
+        <!-- Google AdSense Native Ad Slot -->
+        <ins class="adsbygoogle"
+             style="display:block"
+             th:attr="data-ad-client=${adsenseClientId},
+                      data-ad-slot=${adsenseSlotFeed},
+                      data-ad-layout-key=${adsenseLayoutKey}"
+             data-ad-format="fluid"
+             th:data-ad-personalization="${isGuest} ? 'false' : 'true'"></ins>
+        <div class="adblocker-notice" style="display:none;">
+            <p>Ads help keep LinkVault free for everyone.</p>
+        </div>
+    </div>
+    <button class="ad-card-hide-btn" onclick="showAdHideModal(this)">Hide this ad</button>
+</div>
+
+</html>

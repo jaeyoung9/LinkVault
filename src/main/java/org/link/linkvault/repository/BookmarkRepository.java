@@ -145,4 +145,25 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
 
     @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder WHERE b.deleted = true AND b.user.id = :userId")
     List<Bookmark> findAllDeletedByUserId(@Param("userId") Long userId);
+
+    // --- Public queries for guest access ---
+
+    @EntityGraph(attributePaths = {"folder"})
+    @Query("SELECT b FROM Bookmark b WHERE b.deleted = false AND b.privatePost = false")
+    Page<Bookmark> findAllPublic(Pageable pageable);
+
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder " +
+            "WHERE b.id = :id AND b.deleted = false AND b.privatePost = false")
+    Optional<Bookmark> findByIdPublic(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"folder"})
+    @Query("SELECT b FROM Bookmark b " +
+            "WHERE b.deleted = false AND b.privatePost = false AND (" +
+            "LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(b.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Bookmark> searchByKeywordPublic(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("SELECT DISTINCT b FROM Bookmark b LEFT JOIN FETCH b.tags LEFT JOIN FETCH b.folder " +
+            "JOIN b.tags t WHERE b.deleted = false AND b.privatePost = false AND t.name = :tagName")
+    List<Bookmark> findByTagNamePublic(@Param("tagName") String tagName);
 }

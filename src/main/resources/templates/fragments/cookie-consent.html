@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="cookieConsent" id="cookieConsentBanner" class="cookie-consent-banner" style="display: none;">
+    <div class="cookie-consent-content">
+        <p>We use cookies to keep you logged in and show relevant ads. You can choose to accept or decline non-essential cookies.</p>
+        <div class="cookie-consent-actions">
+            <button class="btn" onclick="acceptCookies()">Accept</button>
+            <button class="btn btn-outline" onclick="declineCookies()">Decline</button>
+            <a href="/policies/ads" style="color: var(--text-muted); font-size: 0.8rem; margin-left: 8px;">Learn more</a>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function() {
+    var consent = localStorage.getItem('cookieConsent');
+    if (!consent) {
+        var banner = document.getElementById('cookieConsentBanner');
+        if (banner) banner.style.display = 'flex';
+    }
+})();
+
+window.acceptCookies = function() {
+    localStorage.setItem('cookieConsent', 'accepted');
+    document.getElementById('cookieConsentBanner').style.display = 'none';
+    // Reload to initialize ads if applicable
+    if (document.querySelector('.adsbygoogle')) {
+        location.reload();
+    }
+};
+
+window.declineCookies = function() {
+    localStorage.setItem('cookieConsent', 'declined');
+    document.getElementById('cookieConsentBanner').style.display = 'none';
+};
+</script>
+
+</html>

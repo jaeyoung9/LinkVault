@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Transparency Reports - Admin - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>Transparency Reports</h2>
+            <button class="btn" onclick="showCreateModal()">Create Report</button>
+        </div>
+
+        <!-- Reports List -->
+        <div th:if="${reports != null and !reports.isEmpty()}">
+            <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+                <thead>
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <th style="text-align: left; padding: 8px;">Title</th>
+                    <th style="text-align: left; padding: 8px;">Period</th>
+                    <th style="text-align: right; padding: 8px;">Donations</th>
+                    <th style="text-align: right; padding: 8px;">Pass Revenue</th>
+                    <th style="text-align: center; padding: 8px;">Status</th>
+                    <th style="text-align: right; padding: 8px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="report : ${reports}" style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 8px;" th:text="${report.title}">Title</td>
+                    <td style="padding: 8px; color: var(--text-secondary);" th:text="${report.period}">Q1 2026</td>
+                    <td style="padding: 8px; text-align: right;"
+                        th:text="'$' + ${#numbers.formatDecimal(report.totalDonationsCents / 100.0, 1, 2)}">$0.00</td>
+                    <td style="padding: 8px; text-align: right;"
+                        th:text="'$' + ${#numbers.formatDecimal(report.totalPassRevenueCents / 100.0, 1, 2)}">$0.00</td>
+                    <td style="padding: 8px; text-align: center;">
+                        <span th:if="${report.published}" style="color: var(--success);">Published</span>
+                        <span th:unless="${report.published}" style="color: var(--text-muted);">Draft</span>
+                    </td>
+                    <td style="padding: 8px; text-align: right;">
+                        <button class="btn btn-sm" style="font-size: 0.75rem; padding: 2px 8px;"
+                                th:onclick="'editReport(' + ${report.id} + ')'">Edit</button>
+                        <button th:if="${!report.published}" class="btn btn-sm" style="font-size: 0.75rem; padding: 2px 8px;"
+                                th:onclick="'publishReport(' + ${report.id} + ')'">Publish</button>
+                        <button th:if="${report.published}" class="btn btn-sm" style="font-size: 0.75rem; padding: 2px 8px;"
+                                th:onclick="'unpublishReport(' + ${report.id} + ')'">Unpublish</button>
+                        <button class="btn btn-sm" style="font-size: 0.75rem; padding: 2px 8px; color: var(--danger);"
+                                th:onclick="'deleteReport(' + ${report.id} + ')'">Delete</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${reports == null or reports.isEmpty()}" class="empty-state">
+            <p>No transparency reports yet. Create one to get started.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div id="reportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
+    <div class="settings-card" style="max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <h3 id="modalTitle">Create Transparency Report</h3>
+        <input type="hidden" id="reportId" value=""/>
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-size: 0.85rem;">Title</label>
+            <input type="text" id="reportTitleInput" class="form-input" placeholder="Q1 2026 Transparency Report" style="width: 100%;"/>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-size: 0.85rem;">Period</label>
+            <input type="text" id="reportPeriod" class="form-input" placeholder="January - March 2026" style="width: 100%;"/>
+        </div>
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div style="flex: 1;">
+                <label style="display: block; margin-bottom: 4px; font-size: 0.85rem;">Total Donations ($)</label>
+                <input type="number" id="reportDonations" class="form-input" placeholder="0.00" step="0.01" style="width: 100%;"/>
+            </div>
+            <div style="flex: 1;">
+                <label style="display: block; margin-bottom: 4px; font-size: 0.85rem;">Pass Revenue ($)</label>
+                <input type="number" id="reportPassRevenue" class="form-input" placeholder="0.00" step="0.01" style="width: 100%;"/>
+            </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-size: 0.85rem;">Content (HTML)</label>
+            <textarea id="reportContent" class="form-input" rows="10" placeholder="Report content..." style="width: 100%; resize: vertical;"></textarea>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn" onclick="saveReport()" style="background: var(--primary); color: white;">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const csrf = document.querySelector('meta[name="_csrf"]');
+const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+function getHeaders() {
+    const h = { 'Content-Type': 'application/json' };
+    if (csrf && csrfHeader) h[csrfHeader.content] = csrf.content;
+    return h;
+}
+
+function showCreateModal() {
+    document.getElementById('modalTitle').textContent = 'Create Transparency Report';
+    document.getElementById('reportId').value = '';
+    document.getElementById('reportTitleInput').value = '';
+    document.getElementById('reportPeriod').value = '';
+    document.getElementById('reportDonations').value = '';
+    document.getElementById('reportPassRevenue').value = '';
+    document.getElementById('reportContent').value = '';
+    document.getElementById('reportModal').style.display = 'flex';
+}
+
+function editReport(id) {
+    fetch('/api/admin/transparency-reports?size=100', { headers: getHeaders() })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var report = (data.content || []).find(function(r) { return r.id === id; });
+            if (!report) return alert('Report not found');
+            document.getElementById('modalTitle').textContent = 'Edit Report';
+            document.getElementById('reportId').value = id;
+            document.getElementById('reportTitleInput').value = report.title;
+            document.getElementById('reportPeriod').value = report.period;
+            document.getElementById('reportDonations').value = (report.totalDonationsCents / 100).toFixed(2);
+            document.getElementById('reportPassRevenue').value = (report.totalPassRevenueCents / 100).toFixed(2);
+            document.getElementById('reportContent').value = report.content || '';
+            document.getElementById('reportModal').style.display = 'flex';
+        });
+}
+
+function closeModal() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+function saveReport() {
+    var id = document.getElementById('reportId').value;
+    var body = {
+        title: document.getElementById('reportTitleInput').value,
+        period: document.getElementById('reportPeriod').value,
+        content: document.getElementById('reportContent').value,
+        totalDonationsCents: Math.round(parseFloat(document.getElementById('reportDonations').value || 0) * 100),
+        totalPassRevenueCents: Math.round(parseFloat(document.getElementById('reportPassRevenue').value || 0) * 100)
+    };
+    var method = id ? 'PUT' : 'POST';
+    var url = id ? '/api/admin/transparency-reports/' + id : '/api/admin/transparency-reports';
+    fetch(url, { method: method, headers: getHeaders(), body: JSON.stringify(body) })
+        .then(function(r) { if (!r.ok) throw new Error('Save failed'); return r.json(); })
+        .then(function() { location.reload(); })
+        .catch(function(e) { alert(e.message); });
+}
+
+function publishReport(id) {
+    fetch('/api/admin/transparency-reports/' + id + '/publish', {
+        method: 'PATCH', headers: getHeaders()
+    }).then(function() { location.reload(); });
+}
+
+function unpublishReport(id) {
+    fetch('/api/admin/transparency-reports/' + id + '/unpublish', {
+        method: 'PATCH', headers: getHeaders()
+    }).then(function() { location.reload(); });
+}
+
+function deleteReport(id) {
+    if (!confirm('Delete this report?')) return;
+    fetch('/api/admin/transparency-reports/' + id, {
+        method: 'DELETE', headers: getHeaders()
+    }).then(function() { location.reload(); });
+}
+</script>
+</body>
+</html>

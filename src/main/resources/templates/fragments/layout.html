@@ -4,8 +4,8 @@
 
 <!-- Sidebar Fragment (includes mobile hamburger + notification panel) -->
 <th:block th:fragment="sidebar">
-<meta name="_csrf" th:content="${_csrf.token}"/>
-<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+<meta name="_csrf" th:content="${_csrf != null} ? ${_csrf.token} : ''"/>
+<meta name="_csrf_header" th:content="${_csrf != null} ? ${_csrf.headerName} : ''"/>
 <script th:inline="javascript">
 (function(){var t=/*[[${currentTheme}]]*/'DARK';if(t==='LIGHT')document.body.classList.add('light-theme');else document.body.classList.remove('light-theme');localStorage.setItem('theme',t);})();
 </script>
@@ -21,24 +21,27 @@
             </div>
             <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
         </div>
-        <p class="sidebar-username" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
-           sec:authentication="name">user</p>
+        <p th:if="${currentUser != null}" class="sidebar-username" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
+           th:text="${currentUser}">user</p>
+        <p th:if="${currentUser == null}" class="sidebar-username" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">Guest</p>
 
         <!-- Sidebar header icons: Search + Notifications -->
         <div class="sidebar-header-icons">
             <button class="sidebar-icon-btn" onclick="openSearchModal()" title="Search (Ctrl+K)">
                 &#128269; <span class="sidebar-icon-label">Ctrl+K</span>
             </button>
+            <th:block th:if="${currentUser != null}">
             <button class="sidebar-icon-btn notification-bell-btn" onclick="toggleNotificationPanel()" title="Notifications">
                 &#128276;
                 <span class="notification-badge" th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
                       th:text="${unreadNotificationCount}">0</span>
             </button>
+            </th:block>
         </div>
     </div>
 
-    <!-- Favorites Section -->
-    <div class="sidebar-section favorites-section" th:if="${favorites != null and !favorites.isEmpty()}">
+    <!-- Favorites Section (members only) -->
+    <div class="sidebar-section favorites-section" th:if="${currentUser != null and favorites != null and !favorites.isEmpty()}">
         <h3>&#9733; Favorites</h3>
         <div id="favoritesContainer">
             <div th:each="fav : ${favorites}" class="favorite-item" draggable="true"
@@ -53,14 +56,27 @@
         </div>
     </div>
 
-    <!-- Dynamic Menu Items -->
-    <div class="sidebar-section" th:if="${sidebarMenuItems != null and !sidebarMenuItems.isEmpty()}">
+    <!-- Dynamic Menu Items (members only) -->
+    <div class="sidebar-section" th:if="${currentUser != null and sidebarMenuItems != null and !sidebarMenuItems.isEmpty()}">
         <th:block th:each="item : ${sidebarMenuItems}">
             <div th:replace="~{fragments/layout :: menuItem(${item})}"></div>
         </th:block>
     </div>
 
+    <!-- Guest: minimal navigation -->
+    <th:block th:if="${currentUser == null}">
     <div class="sidebar-section">
+        <a href="/" class="sidebar-link"><span class="sidebar-link-text">Feed</span></a>
+        <a href="/map" class="sidebar-link"><span class="sidebar-link-text">Map Discover</span></a>
+        <a href="/qna" class="sidebar-link"><span class="sidebar-link-text">QnA Guide</span></a>
+    </div>
+    <div class="sidebar-section" style="padding: 8px 12px;">
+        <div th:replace="~{fragments/guest-banner :: guestBanner}"></div>
+    </div>
+    </th:block>
+
+    <!-- Folders Section (members only) -->
+    <div class="sidebar-section" th:if="${currentUser != null}">
         <h3>Folders</h3>
         <div id="uncategorizedDrop">
             <a href="/" class="sidebar-link">
@@ -95,12 +111,18 @@
             <span class="sidebar-announcement-badge" th:if="${unreadAnnouncementCount != null and unreadAnnouncementCount > 0}"
                   th:text="${unreadAnnouncementCount}">0</span>
         </a>
+        <th:block th:if="${currentUser != null}">
         <a href="/settings" class="sidebar-link"><span class="sidebar-link-text">Settings</span></a>
         <form th:action="@{/logout}" method="post" style="margin: 0;">
             <button type="submit" class="sidebar-link" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem; padding: 6px 12px;">
                 <span class="sidebar-link-text">Logout</span>
             </button>
         </form>
+        </th:block>
+        <th:block th:if="${currentUser == null}">
+        <a href="/login" class="sidebar-link"><span class="sidebar-link-text">Sign In</span></a>
+        <a href="/register" class="sidebar-link" style="color: var(--accent);"><span class="sidebar-link-text">Create Account</span></a>
+        </th:block>
     </div>
 </div>
 
@@ -116,6 +138,12 @@
         </div>
     </div>
 </div>
+
+<!-- Cookie consent banner for guests -->
+<th:block th:if="${isGuest}">
+    <div th:replace="~{fragments/cookie-consent :: cookieConsent}"></div>
+</th:block>
+
 </th:block>
 
 <!-- Dynamic Menu Item Fragment (recursive) -->
@@ -163,7 +191,10 @@
         <div class="post-card-caption" th:if="${bookmark.caption != null and !bookmark.caption.isEmpty()}"
              th:text="${bookmark.caption}">Caption snippet</div>
         <div class="post-card-meta">
-            <span th:if="${bookmark.ownerUsername != null}" th:text="'by ' + ${bookmark.ownerUsername}"></span>
+            <span th:if="${bookmark.ownerUsername != null}">
+                <span th:text="'by ' + ${bookmark.ownerUsername}"></span>
+                <span th:if="${bookmark.ownerSupporter}" class="supporter-badge" title="Supporter">&#9733;</span>
+            </span>
             <a th:href="@{'/bookmark/' + ${bookmark.id}}"
                style="color: var(--text-muted); text-decoration: none;"
                th:text="${bookmark.commentCount != null and bookmark.commentCount > 0} ? ${bookmark.commentCount} + ' comments' : 'Comment'">Comment</a>
