@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,7 +43,8 @@ public class NotificationService {
     }
 
     public Page<NotificationResponseDto> getNotifications(User user, Pageable pageable) {
-        return notificationRepository.findByRecipientId(user.getId(), pageable)
+        LocalDateTime readCutoff = LocalDateTime.now().minusHours(24);
+        return notificationRepository.findVisibleByRecipientId(user.getId(), readCutoff, pageable)
                 .map(NotificationResponseDto::from);
     }
 

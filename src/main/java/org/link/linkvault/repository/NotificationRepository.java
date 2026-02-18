@@ -8,11 +8,20 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    @Query(value = "SELECT n FROM Notification n LEFT JOIN FETCH n.sourceUser WHERE n.recipient.id = :recipientId ORDER BY n.createdAt DESC",
-           countQuery = "SELECT COUNT(n) FROM Notification n WHERE n.recipient.id = :recipientId")
-    Page<Notification> findByRecipientId(@Param("recipientId") Long recipientId, Pageable pageable);
+    @Query(value = "SELECT n FROM Notification n LEFT JOIN FETCH n.sourceUser " +
+            "WHERE n.recipient.id = :recipientId " +
+            "AND (n.read = false OR n.createdAt > :readCutoff) " +
+            "ORDER BY n.createdAt DESC",
+           countQuery = "SELECT COUNT(n) FROM Notification n " +
+                   "WHERE n.recipient.id = :recipientId " +
+                   "AND (n.read = false OR n.createdAt > :readCutoff)")
+    Page<Notification> findVisibleByRecipientId(@Param("recipientId") Long recipientId,
+                                                @Param("readCutoff") LocalDateTime readCutoff,
+                                                Pageable pageable);
 
     long countByRecipientIdAndReadFalse(Long recipientId);
 

@@ -122,11 +122,13 @@ function openEditModal(id) {
                 }
                 if (b.latitude && b.longitude && typeof composeMap !== 'undefined' && composeMap) {
                     var latlng = L.latLng(b.latitude, b.longitude);
+                    var emojiIcon = createEmojiIcon(b.mapEmoji || '📍');
                     composeMap.setView(latlng, 15);
                     if (typeof composeMarker !== 'undefined' && composeMarker) {
                         composeMarker.setLatLng(latlng);
+                        composeMarker.setIcon(emojiIcon);
                     } else {
-                        composeMarker = L.marker(latlng).addTo(composeMap);
+                        composeMarker = L.marker(latlng, { icon: emojiIcon }).addTo(composeMap);
                     }
                 }
             }, 200);
@@ -836,6 +838,10 @@ function saveFavoritesOrder() {
 }
 
 // ===== Feature 5: Notifications =====
+var notifPage = 0;
+var notifHasMore = true;
+var notifLoading = false;
+
 function toggleNotificationPanel() {
     var panel = document.getElementById('notificationPanel');
     if (!panel) return;
@@ -851,6 +857,9 @@ function toggleNotificationPanel() {
             }
         }
         panel.style.display = 'flex';
+        notifPage = 0;
+        notifHasMore = true;
+        document.getElementById('notificationList').innerHTML = '';
         loadNotifications();
     } else {
         panel.style.display = 'none';
@@ -858,14 +867,20 @@ function toggleNotificationPanel() {
 }
 
 function loadNotifications() {
-    fetch('/api/notifications?page=0&size=20')
+    if (notifLoading || !notifHasMore) return;
+    notifLoading = true;
+
+    fetch('/api/notifications?page=' + notifPage + '&size=20')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var list = document.getElementById('notificationList');
-            if (!data.content || data.content.length === 0) {
+
+            if (notifPage === 0 && (!data.content || data.content.length === 0)) {
                 list.innerHTML = '<div class="empty-state" style="padding:20px;"><p style="font-size:0.82rem;">No notifications</p></div>';
+                notifHasMore = false;
                 return;
             }
+
             var html = '';
             data.content.forEach(function(n) {
                 var cls = n.read ? 'notification-item' : 'notification-item unread';
@@ -874,9 +889,13 @@ function loadNotifications() {
                     '<div>' + escapeHtml(n.message) + '</div>' +
                     '<div class="notification-time">' + formatNotifTime(n.createdAt) + '</div></a>';
             });
-            list.innerHTML = html;
+            list.insertAdjacentHTML('beforeend', html);
+
+            notifHasMore = !data.last;
+            notifPage++;
         })
-        .catch(function() {});
+        .catch(function() {})
+        .finally(function() { notifLoading = false; });
 }
 
 function markNotifRead(id) {
@@ -886,6 +905,9 @@ function markNotifRead(id) {
 function markAllNotificationsRead() {
     fetch('/api/notifications/read-all', { method: 'PUT', headers: csrfHeaders() })
         .then(function() {
+            notifPage = 0;
+            notifHasMore = true;
+            document.getElementById('notificationList').innerHTML = '';
             loadNotifications();
             var badge = document.querySelector('.notification-badge');
             if (badge) badge.remove();
@@ -1038,4 +1060,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (urlInput) urlInput.addEventListener('blur', checkDuplicateUrl);
     pollUnreadCount();
     setInterval(pollUnreadCount, 60000);
+
+    // Infinite scroll for notification panel
+    var notifList = document.getElementById('notificationList');
+    if (notifList) {
+        notifList.addEventListener('scroll', function() {
+            if (notifList.scrollTop + notifList.clientHeight >= notifList.scrollHeight - 40) {
+                loadNotifications();
+            }
+        });
+    }
 });

@@ -135,11 +135,13 @@ public class WebController {
     @GetMapping("/tag/{tagName}")
     public String tagView(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable String tagName, Model model) {
+            @PathVariable String tagName, Model model,
+            HttpServletRequest request) {
         if (userDetails == null) {
             if (!isGuestAccessEnabled()) return "redirect:/login";
             List<BookmarkResponseDto> bookmarks = bookmarkService.findByTagNamePublic(tagName);
             populateGuestModel(model);
+            populateAdModel(model, null, bookmarks.size(), request);
             model.addAttribute("bookmarkList", bookmarks);
             model.addAttribute("currentTag", tagName);
             model.addAttribute("pageTitle", "Tag: " + tagName);
@@ -149,6 +151,7 @@ public class WebController {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         List<BookmarkResponseDto> bookmarks = bookmarkService.findByTagName(currentUser, tagName);
         populateCommonModel(model, currentUser);
+        populateAdModel(model, currentUser, bookmarks.size(), request);
         model.addAttribute("bookmarkList", bookmarks);
         model.addAttribute("currentTag", tagName);
         model.addAttribute("pageTitle", "Tag: " + tagName);
@@ -161,13 +164,15 @@ public class WebController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            Model model) {
+            Model model,
+            HttpServletRequest request) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         if (userDetails == null) {
             if (!isGuestAccessEnabled()) return "redirect:/login";
             Page<BookmarkResponseDto> results = bookmarkService.searchByKeywordPublic(keyword, pageable);
             populateGuestModel(model);
+            populateAdModel(model, null, results.getNumberOfElements(), request);
             model.addAttribute("bookmarks", results);
             model.addAttribute("keyword", keyword);
             model.addAttribute("pageTitle", "Search: " + keyword);
@@ -177,6 +182,7 @@ public class WebController {
         User currentUser = userService.getUserEntity(userDetails.getUsername());
         Page<BookmarkResponseDto> results = bookmarkService.searchByKeyword(currentUser, keyword, pageable);
         populateCommonModel(model, currentUser);
+        populateAdModel(model, currentUser, results.getNumberOfElements(), request);
         model.addAttribute("bookmarks", results);
         model.addAttribute("keyword", keyword);
         model.addAttribute("pageTitle", "Search: " + keyword);

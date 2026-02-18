@@ -13,7 +13,7 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 
     boolean existsByName(String name);
 
-    @Query("SELECT t FROM Tag t LEFT JOIN FETCH t.bookmarks")
+    @Query("SELECT DISTINCT t FROM Tag t LEFT JOIN FETCH t.bookmarks")
     List<Tag> findAllWithBookmarks();
 
     @Query("SELECT t FROM Tag t WHERE t.bookmarks IS EMPTY")

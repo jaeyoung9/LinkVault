@@ -189,11 +189,7 @@ function initDetailMap(lat, lng, emoji) {
         maxZoom: 19
     }).addTo(map);
 
-    if (emoji) {
-        L.marker([lat, lng], { icon: createEmojiIcon(emoji) }).addTo(map);
-    } else {
-        L.marker([lat, lng]).addTo(map);
-    }
+    L.marker([lat, lng], { icon: createEmojiIcon(emoji || '📍') }).addTo(map);
 }
 
 // ===== Discovery Map =====
