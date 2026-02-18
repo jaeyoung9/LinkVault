@@ -564,7 +564,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // Feature flags (all OFF by default)
         systemSettingsRepository.save(SystemSettings.builder()
-                .settingKey("feature.guest-access-enabled").settingValue("false")
+                .settingKey("feature.guest-access-enabled").settingValue("true")
                 .description("Enable anonymous guest read access").category("FEATURE_FLAGS").build());
         systemSettingsRepository.save(SystemSettings.builder()
                 .settingKey("feature.ads-enabled").settingValue("false")
