@@ -337,6 +337,14 @@ public class WebController {
         model.addAttribute("userEmail", currentUser.getEmail());
         model.addAttribute("pageTitle", "Settings");
 
+        // Feature flags for conditional tab visibility
+        boolean adsEnabled = systemSettingsService.getValue("feature.ads-enabled")
+                .map("true"::equals).orElse(false);
+        boolean donationsEnabled = systemSettingsService.getValue("feature.donations-enabled")
+                .map("true"::equals).orElse(false);
+        model.addAttribute("subscriptionTabEnabled", adsEnabled);
+        model.addAttribute("supportTabEnabled", donationsEnabled);
+
         // Donation amounts from SystemSettings (comma-separated dollar values)
         String oneTimeRaw = systemSettingsService.getValue("donation.one-time-amounts").orElse("5,10,25,50");
         String recurringRaw = systemSettingsService.getValue("donation.recurring-amounts").orElse("3,5,10");

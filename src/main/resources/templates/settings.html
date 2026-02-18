@@ -22,8 +22,8 @@
             <button class="settings-tab" onclick="switchSettingsTab('notifications')">Notifications</button>
             <button class="settings-tab" onclick="switchSettingsTab('privacy')">Privacy</button>
             <button class="settings-tab" onclick="switchSettingsTab('account')">Account</button>
-            <button class="settings-tab" onclick="switchSettingsTab('subscription')">Subscription</button>
-            <button class="settings-tab" onclick="switchSettingsTab('support')">Support</button>
+            <button th:if="${subscriptionTabEnabled}" class="settings-tab" onclick="switchSettingsTab('subscription')">Subscription</button>
+            <button th:if="${supportTabEnabled}" class="settings-tab" onclick="switchSettingsTab('support')">Support</button>
         </div>
 
         <!-- Appearance Tab -->
@@ -115,7 +115,7 @@
         </div>
 
         <!-- Subscription Tab -->
-        <div id="tab-subscription" class="settings-panel">
+        <div th:if="${subscriptionTabEnabled}" id="tab-subscription" class="settings-panel">
             <div class="settings-card">
                 <h3>Ad-Free Experience</h3>
                 <p class="settings-desc">If you'd like an ad-free experience, you can choose a pass below. All core features are available regardless of your choice.</p>
@@ -158,7 +158,7 @@
         </div>
 
         <!-- Support Tab -->
-        <div id="tab-support" class="settings-panel">
+        <div th:if="${supportTabEnabled}" id="tab-support" class="settings-panel">
             <div class="settings-card">
                 <h3>Help Keep LinkVault Running</h3>
                 <p class="settings-desc">Your support covers server hosting, development, and community operations. Every contribution helps keep this service available for everyone.</p>

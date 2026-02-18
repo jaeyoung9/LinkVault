@@ -39,17 +39,35 @@ var AUDIT_HINTS = {
     'audit.retention.enabled': { type: 'select', options: ['true', 'false'] },
     'audit.retention.days': { type: 'number', min: 30, max: 3650, hint: '30 ~ 3650' },
     'audit.delete.mode': { type: 'select', options: ['SOFT', 'HARD'] },
-    'audit.masking.level': { type: 'select', options: ['NONE', 'BASIC', 'STRICT'] }
+    'audit.masking.level': { type: 'select', options: ['NONE', 'BASIC', 'STRICT'] },
+    'feature.guest-access-enabled': { type: 'select', options: ['true', 'false'] },
+    'feature.ads-enabled': { type: 'select', options: ['true', 'false'] },
+    'feature.rewarded-video-enabled': { type: 'select', options: ['true', 'false'] },
+    'feature.donations-enabled': { type: 'select', options: ['true', 'false'] },
+    'ad.max-per-page': { type: 'number', min: 0, max: 20, hint: '0 ~ 20' },
+    'ad.max-per-session': { type: 'number', min: 0, max: 100, hint: '0 ~ 100' },
+    'ad.max-per-hour': { type: 'number', min: 0, max: 100, hint: '0 ~ 100' },
+    'ad.feed-insertion-interval': { type: 'number', min: 1, max: 50, hint: '1 ~ 50' },
+    'ad.guest-first-session-grace': { type: 'number', min: 0, max: 20, hint: '0 ~ 20' },
+    'reward.video-points': { type: 'number', min: 1, max: 100, hint: '1 ~ 100' },
+    'reward.adfree-hours-cost': { type: 'number', min: 1, max: 500, hint: '1 ~ 500' },
+    'reward.adfree-hours-duration': { type: 'number', min: 1, max: 48, hint: '1 ~ 48' },
+    'reward.daily-video-cap': { type: 'number', min: 1, max: 50, hint: '1 ~ 50' }
 };
 
 var CATEGORY_LABELS = {
+    'FEATURE_FLAGS': 'Feature Flags',
+    'AD_POLICY': 'Ad Policy',
+    'REWARD': 'Reward Settings',
+    'STRIPE': 'Stripe Payment',
+    'DONATION': 'Donation Settings',
     'AUDIT_POLICY': 'Audit Policy',
     'FILE_STORAGE': 'File Storage',
     'MODERATION': 'Moderation',
     'GENERAL': 'General'
 };
 
-var CATEGORY_ORDER = ['AUDIT_POLICY', 'FILE_STORAGE', 'MODERATION', 'GENERAL'];
+var CATEGORY_ORDER = ['FEATURE_FLAGS', 'AD_POLICY', 'REWARD', 'STRIPE', 'DONATION', 'AUDIT_POLICY', 'FILE_STORAGE', 'MODERATION', 'GENERAL'];
 
 function loadSettings() {
     adminFetch('/api/admin/settings')
