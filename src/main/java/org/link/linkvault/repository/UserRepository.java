@@ -28,4 +28,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "AND u.role <> org.link.linkvault.entity.Role.SUPER_ADMIN " +
            "AND (u.privacyAgreedVersion IS NULL OR u.privacyAgreedVersion <> :activeVersion)")
     List<User> findEnabledUsersNotConsentedToVersion(@Param("activeVersion") int activeVersion);
+
+    @Query("SELECT u FROM User u WHERE u.accountLockedUntil IS NOT NULL AND u.accountLockedUntil > CURRENT_TIMESTAMP")
+    List<User> findLockedUsers();
 }

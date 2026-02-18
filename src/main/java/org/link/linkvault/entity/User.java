@@ -54,6 +54,11 @@ public class User {
     private String deactivationReason;
 
     @Column(nullable = false)
+    private int failedLoginAttempts = 0;
+
+    private LocalDateTime accountLockedUntil;
+
+    @Column(nullable = false)
     private int rewardPoints = 0;
 
     @Column(nullable = false)
@@ -123,5 +128,22 @@ public class User {
 
     public void markAsSupporter() {
         this.supporter = true;
+    }
+
+    public void recordFailedLogin() {
+        this.failedLoginAttempts++;
+    }
+
+    public void lockAccount(LocalDateTime until) {
+        this.accountLockedUntil = until;
+    }
+
+    public void resetFailedLoginAttempts() {
+        this.failedLoginAttempts = 0;
+        this.accountLockedUntil = null;
+    }
+
+    public boolean isAccountLocked() {
+        return this.accountLockedUntil != null && LocalDateTime.now().isBefore(this.accountLockedUntil);
     }
 }

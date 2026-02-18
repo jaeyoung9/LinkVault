@@ -50,6 +50,7 @@ public class AdminApiController {
     private final GuestEventService guestEventService;
     private final StripeService stripeService;
     private final org.link.linkvault.repository.AdFreePassRepository adFreePassRepository;
+    private final AccountLockoutService accountLockoutService;
 
     // --- User CRUD ---
 
@@ -599,6 +600,34 @@ public class AdminApiController {
         java.time.LocalDateTime from = java.time.LocalDateTime.now().minusDays(days);
         java.time.LocalDateTime to = java.time.LocalDateTime.now();
         return ResponseEntity.ok(guestEventService.getFunnelStats(from, to));
+    }
+
+    // --- Account Lockout Management ---
+
+    @GetMapping("/users/locked")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    public ResponseEntity<List<Map<String, Object>>> getLockedUsers() {
+        List<Map<String, Object>> result = accountLockoutService.getLockedUsers().stream()
+                .map(u -> {
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", u.getId());
+                    m.put("username", u.getUsername());
+                    m.put("email", u.getEmail());
+                    m.put("failedAttempts", u.getFailedLoginAttempts());
+                    m.put("lockedUntil", u.getAccountLockedUntil());
+                    return m;
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/users/{id}/unlock")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    public ResponseEntity<Map<String, String>> unlockUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        accountLockoutService.unlockUser(id, userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Account unlocked successfully"));
     }
 
     // --- Payment Management ---

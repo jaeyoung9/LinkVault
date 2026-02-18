@@ -12,10 +12,13 @@
         <h1 style="color: var(--accent); margin-bottom: 4px;">LinkVault</h1>
         <p class="login-subtitle">Sign in to your account</p>
 
-        <div th:if="${param.error}" class="alert alert-danger">
+        <div th:if="${param.locked != null}" class="alert alert-danger">
+            Account is temporarily locked due to too many failed login attempts. Please try again later.
+        </div>
+        <div th:if="${param.error != null and param.locked == null}" class="alert alert-danger">
             Invalid username or password.
         </div>
-        <div th:if="${param.logout}" class="alert alert-success">
+        <div th:if="${param.logout != null}" class="alert alert-success">
             You have been logged out successfully.
         </div>
 

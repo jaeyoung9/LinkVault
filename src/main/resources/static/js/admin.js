@@ -270,4 +270,22 @@ document.addEventListener('click', function(e) {
         restoreBackup(restoreBtn.dataset.filename);
         return;
     }
+
+    // Unlock user
+    var unlockBtn = e.target.closest('.js-unlock-user');
+    if (unlockBtn) {
+        unlockUser(unlockBtn.dataset.id);
+        return;
+    }
 });
+
+// ===== Account Lockout Management =====
+function unlockUser(id) {
+    if (!confirm('Unlock this user account?')) return;
+    adminFetch('/api/admin/users/' + id + '/unlock', { method: 'POST' })
+        .then(function(data) {
+            showToast((data && data.message) || 'Account unlocked');
+            setTimeout(function() { location.reload(); }, 500);
+        })
+        .catch(function(err) { showToast(err.message || 'Error unlocking account', 'error'); });
+}

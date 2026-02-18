@@ -25,6 +25,9 @@ public class UserResponseDto {
     private Integer privacyAgreedVersion;
     private LocalDateTime deactivatedAt;
     private String deactivationReason;
+    private int failedLoginAttempts;
+    private LocalDateTime accountLockedUntil;
+    private boolean accountLocked;
 
     public static UserResponseDto from(User user, long bookmarkCount) {
         return UserResponseDto.builder()
@@ -40,6 +43,9 @@ public class UserResponseDto {
                 .privacyAgreedVersion(user.getPrivacyAgreedVersion())
                 .deactivatedAt(user.getDeactivatedAt())
                 .deactivationReason(user.getDeactivationReason())
+                .failedLoginAttempts(user.getFailedLoginAttempts())
+                .accountLockedUntil(user.getAccountLockedUntil())
+                .accountLocked(user.isAccountLocked())
                 .build();
     }
 }

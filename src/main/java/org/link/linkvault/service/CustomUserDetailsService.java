@@ -46,11 +46,13 @@ public class CustomUserDetailsService implements UserDetailsService {
                     authorities.add(new SimpleGrantedAuthority(name)));
         }
 
+        boolean accountNonLocked = !user.isAccountLocked();
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
                 user.isEnabled(),
-                true, true, true,
+                true, true, accountNonLocked,
                 authorities
         );
     }

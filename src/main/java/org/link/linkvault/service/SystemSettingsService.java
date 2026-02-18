@@ -24,6 +24,9 @@ public class SystemSettingsService {
             "audit.retention.enabled", "audit.retention.days",
             "audit.delete.mode", "audit.masking.level"));
 
+    private static final Set<String> LOCKOUT_POLICY_KEYS = new HashSet<>(Arrays.asList(
+            "security.lockout-threshold", "security.lockout-duration-minutes"));
+
     public List<SystemSettings> findAll() {
         return systemSettingsRepository.findAllByOrderByCategoryAscSettingKeyAsc();
     }
@@ -45,13 +48,21 @@ public class SystemSettingsService {
         if (AUDIT_POLICY_KEYS.contains(key)) {
             validateAuditSetting(key, value);
         }
+        if (LOCKOUT_POLICY_KEYS.contains(key)) {
+            validateLockoutSetting(key, value);
+        }
 
         settings.updateValue(value);
         SystemSettings saved = systemSettingsRepository.save(settings);
 
-        String actionCode = AUDIT_POLICY_KEYS.contains(key)
-                ? AuditActionCodes.AUDIT_POLICY_UPDATE
-                : AuditActionCodes.SETTINGS_UPDATE;
+        String actionCode;
+        if (AUDIT_POLICY_KEYS.contains(key)) {
+            actionCode = AuditActionCodes.AUDIT_POLICY_UPDATE;
+        } else if (LOCKOUT_POLICY_KEYS.contains(key)) {
+            actionCode = AuditActionCodes.LOCKOUT_POLICY_UPDATE;
+        } else {
+            actionCode = AuditActionCodes.SETTINGS_UPDATE;
+        }
         auditLogService.log(actorUsername, actionCode, "SystemSettings", null,
                 AuditDetailFormatter.format("key", key));
         return saved;
@@ -72,6 +83,23 @@ public class SystemSettingsService {
                 .category(category)
                 .build();
         return systemSettingsRepository.save(settings);
+    }
+
+    private void validateLockoutSetting(String key, String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Value is required for setting: " + key);
+        }
+        try {
+            int val = Integer.parseInt(value);
+            if ("security.lockout-threshold".equals(key) && (val < 1 || val > 20)) {
+                throw new IllegalArgumentException("security.lockout-threshold must be between 1 and 20");
+            }
+            if ("security.lockout-duration-minutes".equals(key) && (val < 30 || val > 1440)) {
+                throw new IllegalArgumentException("security.lockout-duration-minutes must be between 30 and 1440");
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(key + " must be an integer");
+        }
     }
 
     private void validateAuditSetting(String key, String value) {

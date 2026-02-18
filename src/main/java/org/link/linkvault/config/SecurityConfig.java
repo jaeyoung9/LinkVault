@@ -22,7 +22,9 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final PrivacyConsentSuccessHandler privacyConsentSuccessHandler;
+    private final LoginFailureHandler loginFailureHandler;
     private final PrivacyConsentFilter privacyConsentFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -64,6 +66,7 @@ public class SecurityConfig {
             .formLogin()
                 .loginPage("/login")
                 .successHandler(privacyConsentSuccessHandler)
+                .failureHandler(loginFailureHandler)
                 .permitAll()
             .and()
             .logout()
@@ -78,6 +81,7 @@ public class SecurityConfig {
             .headers()
                 .frameOptions().sameOrigin();
 
+        http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(privacyConsentFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

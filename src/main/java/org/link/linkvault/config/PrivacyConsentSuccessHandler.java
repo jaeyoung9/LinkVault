@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.link.linkvault.dto.PrivacyPolicyResponseDto;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.repository.UserRepository;
+import org.link.linkvault.service.AccountLockoutService;
 import org.link.linkvault.service.PrivacyPolicyService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -23,12 +24,17 @@ public class PrivacyConsentSuccessHandler implements AuthenticationSuccessHandle
 
     private final UserRepository userRepository;
     private final PrivacyPolicyService privacyPolicyService;
+    private final AccountLockoutService accountLockoutService;
 
     @Override
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
         String username = authentication.getName();
+
+        // Reset lockout counters on successful login
+        accountLockoutService.resetOnSuccess(username);
+
         User user = userRepository.findByUsername(username).orElse(null);
 
         if (user != null) {

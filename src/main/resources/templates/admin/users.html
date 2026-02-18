@@ -34,6 +34,7 @@
                 <th>Created</th>
                 <th>Privacy</th>
                 <th>Status</th>
+                <th>Lockout</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -60,6 +61,17 @@
                     <div th:if="${!user.enabled and user.deactivationReason != null}"
                          style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 3px;"
                          th:text="${user.deactivationReason}"></div>
+                </td>
+                <td>
+                    <span th:if="${user.accountLocked}" class="badge badge-danger">
+                        Locked until <span th:text="${#temporals.format(user.accountLockedUntil, 'MM-dd HH:mm')}"></span>
+                    </span>
+                    <span th:if="${user.failedLoginAttempts > 0 and !user.accountLocked}"
+                          class="badge badge-warning"
+                          th:text="'Fails: ' + ${user.failedLoginAttempts}"></span>
+                    <button th:if="${user.accountLocked}"
+                            class="btn btn-sm btn-outline js-unlock-user" th:data-id="${user.id}"
+                            style="margin-top:4px;">Unlock</button>
                 </td>
                 <td>
                     <button class="btn btn-sm btn-outline js-edit-user"

@@ -71,6 +71,11 @@ public final class AuditActionCodes {
     public static final String BOOKMARK_RESTORE = "RESTORE_BOOKMARK";
     public static final String BOOKMARK_PURGE = "PURGE_BOOKMARK";
 
+    // Account lockout
+    public static final String ACCOUNT_LOCKED = "ACCOUNT_LOCKED";
+    public static final String ACCOUNT_UNLOCK = "ADMIN_ACCOUNT_UNLOCK";
+    public static final String LOCKOUT_POLICY_UPDATE = "ADMIN_LOCKOUT_POLICY_UPDATE";
+
     // Monetization
     public static final String AD_FREE_PURCHASE = "AD_FREE_PURCHASE";
     public static final String AD_FREE_REFUND = "AD_FREE_REFUND";

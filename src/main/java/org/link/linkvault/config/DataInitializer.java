@@ -509,6 +509,12 @@ public class DataInitializer implements CommandLineRunner {
         ensureSetting("report.auto-disable-threshold", "5",
                 "Number of actioned reports before user account is auto-disabled", "MODERATION");
 
+        // Account lockout settings
+        ensureSetting("security.lockout-threshold", "5",
+                "Failed login attempts before account lockout (1-20)", "SECURITY");
+        ensureSetting("security.lockout-duration-minutes", "30",
+                "Account lockout duration in minutes (30-1440)", "SECURITY");
+
         // Audit policy settings
         ensureSetting("audit.retention.enabled", "false",
                 "Enable automatic audit log retention cleanup", "AUDIT_POLICY");

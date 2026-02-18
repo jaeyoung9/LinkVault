@@ -32,6 +32,9 @@ dependencies {
     // Security
     implementation("org.springframework.boot:spring-boot-starter-security")
 
+    // Rate limiting
+    implementation("com.bucket4j:bucket4j-core:8.1.1")
+
     // Thymeleaf extras
     implementation("nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:3.1.0")
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity5")

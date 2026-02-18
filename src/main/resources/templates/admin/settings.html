@@ -53,11 +53,14 @@ var AUDIT_HINTS = {
     'reward.video-points': { type: 'number', min: 1, max: 100, hint: '1 ~ 100' },
     'reward.adfree-hours-cost': { type: 'number', min: 1, max: 500, hint: '1 ~ 500' },
     'reward.adfree-hours-duration': { type: 'number', min: 1, max: 48, hint: '1 ~ 48' },
-    'reward.daily-video-cap': { type: 'number', min: 1, max: 50, hint: '1 ~ 50' }
+    'reward.daily-video-cap': { type: 'number', min: 1, max: 50, hint: '1 ~ 50' },
+    'security.lockout-threshold': { type: 'number', min: 1, max: 20, hint: '1 ~ 20' },
+    'security.lockout-duration-minutes': { type: 'number', min: 30, max: 1440, hint: '30 ~ 1440' }
 };
 
 var CATEGORY_LABELS = {
     'FEATURE_FLAGS': 'Feature Flags',
+    'SECURITY': 'Security',
     'AD_POLICY': 'Ad Policy',
     'REWARD': 'Reward Settings',
     'STRIPE': 'Stripe Payment',
@@ -68,7 +71,7 @@ var CATEGORY_LABELS = {
     'GENERAL': 'General'
 };
 
-var CATEGORY_ORDER = ['FEATURE_FLAGS', 'AD_POLICY', 'REWARD', 'STRIPE', 'DONATION', 'AUDIT_POLICY', 'FILE_STORAGE', 'MODERATION', 'GENERAL'];
+var CATEGORY_ORDER = ['FEATURE_FLAGS', 'SECURITY', 'AD_POLICY', 'REWARD', 'STRIPE', 'DONATION', 'AUDIT_POLICY', 'FILE_STORAGE', 'MODERATION', 'GENERAL'];
 
 function loadSettings() {
     adminFetch('/api/admin/settings')
