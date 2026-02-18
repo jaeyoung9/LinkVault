@@ -35,6 +35,22 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+var AUDIT_HINTS = {
+    'audit.retention.enabled': { type: 'select', options: ['true', 'false'] },
+    'audit.retention.days': { type: 'number', min: 30, max: 3650, hint: '30 ~ 3650' },
+    'audit.delete.mode': { type: 'select', options: ['SOFT', 'HARD'] },
+    'audit.masking.level': { type: 'select', options: ['NONE', 'BASIC', 'STRICT'] }
+};
+
+var CATEGORY_LABELS = {
+    'AUDIT_POLICY': 'Audit Policy',
+    'FILE_STORAGE': 'File Storage',
+    'MODERATION': 'Moderation',
+    'GENERAL': 'General'
+};
+
+var CATEGORY_ORDER = ['AUDIT_POLICY', 'FILE_STORAGE', 'MODERATION', 'GENERAL'];
+
 function loadSettings() {
     adminFetch('/api/admin/settings')
         .then(function(settings) {
@@ -44,7 +60,6 @@ function loadSettings() {
                 return;
             }
 
-            // Group by category
             var categories = {};
             settings.forEach(function(s) {
                 var cat = s.category || 'GENERAL';
@@ -52,34 +67,106 @@ function loadSettings() {
                 categories[cat].push(s);
             });
 
-            var html = '';
-            Object.keys(categories).sort().forEach(function(cat) {
-                html += '<div class="card" style="margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;">';
-                html += '<h3 style="margin:0 0 16px 0;font-size:1rem;color:var(--text-primary);">' + escapeHtml(cat.replace(/_/g, ' ')) + '</h3>';
-
-                categories[cat].forEach(function(s) {
-                    html += '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">';
-                    html += '<label style="display:block;margin-bottom:4px;font-weight:500;color:var(--text-primary);font-size:0.9rem;">' + escapeHtml(s.description) + '</label>';
-                    html += '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">' + escapeHtml(s.settingKey) + '</div>';
-                    html += '<div style="display:flex;gap:8px;align-items:center;">';
-                    html += '<input type="text" id="setting-' + escapeHtml(s.settingKey) + '" class="form-control" value="' + escapeHtml(s.settingValue) + '" style="flex:1;"/>';
-                    html += '<button class="btn btn-primary btn-sm" onclick="saveSetting(\'' + escapeHtml(s.settingKey) + '\')">Save</button>';
-                    html += '</div>';
-                    if (s.updatedAt) {
-                        html += '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">Last updated: ' + s.updatedAt.substring(0, 19).replace('T', ' ') + '</div>';
-                    }
-                    html += '</div>';
-                });
-
-                html += '</div>';
+            var sortedKeys = Object.keys(categories).sort(function(a, b) {
+                var ai = CATEGORY_ORDER.indexOf(a);
+                var bi = CATEGORY_ORDER.indexOf(b);
+                if (ai === -1) ai = 999;
+                if (bi === -1) bi = 999;
+                return ai - bi;
             });
 
-            container.innerHTML = html;
+            container.innerHTML = '';
+
+            sortedKeys.forEach(function(cat) {
+                var card = document.createElement('div');
+                card.className = 'card';
+                card.style.cssText = 'margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;';
+
+                var heading = document.createElement('h3');
+                heading.style.cssText = 'margin:0 0 16px 0;font-size:1rem;color:var(--text-primary);';
+                heading.textContent = CATEGORY_LABELS[cat] || cat.replace(/_/g, ' ');
+                card.appendChild(heading);
+
+                categories[cat].forEach(function(s) {
+                    var row = document.createElement('div');
+                    row.style.cssText = 'margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);';
+
+                    var label = document.createElement('label');
+                    label.style.cssText = 'display:block;margin-bottom:4px;font-weight:500;color:var(--text-primary);font-size:0.9rem;';
+                    label.textContent = s.description;
+                    row.appendChild(label);
+
+                    var keyDiv = document.createElement('div');
+                    keyDiv.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;';
+                    keyDiv.textContent = s.settingKey;
+                    row.appendChild(keyDiv);
+
+                    var inputRow = document.createElement('div');
+                    inputRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
+
+                    var hint = AUDIT_HINTS[s.settingKey];
+                    var inputEl;
+
+                    if (hint && hint.type === 'select') {
+                        inputEl = document.createElement('select');
+                        inputEl.id = 'setting-' + s.settingKey;
+                        inputEl.className = 'form-control';
+                        inputEl.style.flex = '1';
+                        hint.options.forEach(function(opt) {
+                            var option = document.createElement('option');
+                            option.value = opt;
+                            option.textContent = opt;
+                            if (opt === s.settingValue) option.selected = true;
+                            inputEl.appendChild(option);
+                        });
+                    } else {
+                        inputEl = document.createElement('input');
+                        inputEl.type = (hint && hint.type === 'number') ? 'number' : 'text';
+                        inputEl.id = 'setting-' + s.settingKey;
+                        inputEl.className = 'form-control';
+                        inputEl.value = s.settingValue || '';
+                        inputEl.style.flex = '1';
+                        if (hint && hint.min !== undefined) inputEl.min = hint.min;
+                        if (hint && hint.max !== undefined) inputEl.max = hint.max;
+                    }
+                    inputRow.appendChild(inputEl);
+
+                    if (hint && hint.hint) {
+                        var hintSpan = document.createElement('span');
+                        hintSpan.style.cssText = 'font-size:0.7rem;color:var(--text-muted);white-space:nowrap;';
+                        hintSpan.textContent = hint.hint;
+                        inputRow.appendChild(hintSpan);
+                    }
+
+                    var saveBtn = document.createElement('button');
+                    saveBtn.className = 'btn btn-primary btn-sm';
+                    saveBtn.textContent = 'Save';
+                    saveBtn.setAttribute('data-key', s.settingKey);
+                    saveBtn.addEventListener('click', function() {
+                        saveSetting(this.getAttribute('data-key'));
+                    });
+                    inputRow.appendChild(saveBtn);
+
+                    row.appendChild(inputRow);
+
+                    if (s.updatedAt) {
+                        var updated = document.createElement('div');
+                        updated.style.cssText = 'font-size:0.7rem;color:var(--text-muted);margin-top:4px;';
+                        updated.textContent = 'Last updated: ' + s.updatedAt.substring(0, 19).replace('T', ' ');
+                        row.appendChild(updated);
+                    }
+
+                    card.appendChild(row);
+                });
+
+                container.appendChild(card);
+            });
         })
         .catch(function(err) {
             var msg = (err && err.message) || 'Error loading settings';
+            if (err && err.status === 403) msg = 'Insufficient permission';
             document.getElementById('settingsContainer').innerHTML =
-                '<div style="text-align:center;padding:40px;color:var(--danger);">' + msg + '</div>';
+                '<div style="text-align:center;padding:40px;color:var(--danger);">' + escapeHtml(msg) + '</div>';
         });
 }
 
@@ -93,11 +180,14 @@ function saveSetting(key) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: value })
     })
-    .then(function() {
-        showToast('Setting updated: ' + key);
+    .then(function(result) {
+        var msg = result && result.settingKey ? 'Saved: ' + result.settingKey : 'Setting updated';
+        showToast(msg);
     })
     .catch(function(err) {
-        showToast(err.message || 'Error saving setting', 'error');
+        var msg = (err && err.message) || 'Error saving setting';
+        if (err && err.status === 403) msg = 'Insufficient permission';
+        showToast(msg, 'error');
     });
 }
 

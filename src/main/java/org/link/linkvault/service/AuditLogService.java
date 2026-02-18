@@ -6,6 +6,7 @@ import org.link.linkvault.dto.AuditLogResponseDto;
 import org.link.linkvault.entity.AuditLog;
 import org.link.linkvault.entity.User;
 import org.link.linkvault.repository.AuditLogRepository;
+import org.link.linkvault.repository.SystemSettingsRepository;
 import org.link.linkvault.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,12 +21,16 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final SystemSettingsRepository systemSettingsRepository;
+
+    private static final String DEFAULT_MASKING_LEVEL = "BASIC";
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String username, String action, String entityType, Long entityId, String details) {
         try {
+            String maskedDetails = AuditDetailFormatter.applyMasking(details, getMaskingLevel());
             User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
-            AuditLog auditLog = new AuditLog(user, action, entityType, entityId, details);
+            AuditLog auditLog = new AuditLog(user, action, entityType, entityId, maskedDetails);
             auditLogRepository.save(auditLog);
         } catch (Exception e) {
             log.warn("AUDIT_PERSIST_FAILURE action={} entityType={} entityId={} actor={}: {}",
@@ -49,5 +54,21 @@ public class AuditLogService {
     public Page<AuditLogResponseDto> findByAction(String action, Pageable pageable) {
         return auditLogRepository.findByAction(action, pageable)
                 .map(AuditLogResponseDto::from);
+    }
+
+    private String getMaskingLevel() {
+        try {
+            return systemSettingsRepository.findBySettingKey("audit.masking.level")
+                    .map(s -> {
+                        String val = s.getSettingValue();
+                        if ("NONE".equals(val) || "BASIC".equals(val) || "STRICT".equals(val)) {
+                            return val;
+                        }
+                        return DEFAULT_MASKING_LEVEL;
+                    })
+                    .orElse(DEFAULT_MASKING_LEVEL);
+        } catch (Exception e) {
+            return DEFAULT_MASKING_LEVEL;
+        }
     }
 }

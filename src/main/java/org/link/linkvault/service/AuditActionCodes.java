@@ -57,6 +57,7 @@ public final class AuditActionCodes {
 
     // System settings
     public static final String SETTINGS_UPDATE = "ADMIN_SETTINGS_UPDATE";
+    public static final String AUDIT_POLICY_UPDATE = "ADMIN_AUDIT_POLICY_UPDATE";
 
     // Comment moderation
     public static final String COMMENT_SOFT_DELETE = "SOFT_DELETE_COMMENT";

@@ -27,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
     private final InvitationCodeRepository invitationCodeRepository;
     private final PrivacyPolicyRepository privacyPolicyRepository;
     private final SystemSettingsRepository systemSettingsRepository;
+    private final QnaArticleRepository qnaArticleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.init.seed-sample-data:true}")
@@ -39,14 +40,187 @@ public class DataInitializer implements CommandLineRunner {
         initMenuItems();
         initPrivacyPolicy();
         initSystemSettings();
-
         if (seedSampleData) {
             initUsers();
             initInvitationCode();
+            initQnaArticles();
         } else {
             initBootstrapAdmin();
         }
     }
+
+    private void initQnaArticles() {
+        if (qnaArticleRepository.count() > 0) {
+            return;
+        }
+
+        User admin = userRepository.findByUsername("admin").orElse(null);
+        if (admin == null) {
+            log.warn("Admin user not found, skipping QnA initialization");
+            return;
+        }
+
+        log.info("Initializing user guide QnA articles...");
+
+        String quickStartAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Quick Start for New Users</p>\n" +
+                "<p style=\"margin-bottom: 8px;\">Follow these steps to start using LinkVault effectively:</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li><strong>Open Feed</strong> at <a href=\"/\">/</a> to check your bookmark timeline.</li>\n" +
+                "  <li><strong>Create folders</strong> for core topics (Work, Study, Tools, Inspiration).</li>\n" +
+                "  <li><strong>Add bookmarks</strong> with a clear title, URL, and tags.</li>\n" +
+                "  <li><strong>Use Saved &amp; Private</strong> at <a href=\"/saved\">/saved</a> for personal curation.</li>\n" +
+                "  <li><strong>Search quickly</strong> when you need to find links by keyword.</li>\n" +
+                "</ol>\n" +
+                "<p style=\"margin-top: 10px;\"><strong>Tip:</strong> Keep your first folder structure simple, then refine it weekly.</p>";
+
+        String screensGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Main Screens and Best Use Cases</p>\n" +
+                "<table style=\"width: 100%; border-collapse: collapse;\">\n" +
+                "  <thead>\n" +
+                "    <tr>\n" +
+                "      <th style=\"text-align:left; border-bottom:1px solid #ddd; padding:8px;\">Screen</th>\n" +
+                "      <th style=\"text-align:left; border-bottom:1px solid #ddd; padding:8px;\">What to do there</th>\n" +
+                "      <th style=\"text-align:left; border-bottom:1px solid #ddd; padding:8px;\">Open</th>\n" +
+                "    </tr>\n" +
+                "  </thead>\n" +
+                "  <tbody>\n" +
+                "    <tr><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Feed</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Review recent bookmarks and updates.</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\"><a href=\"/\">Go</a></td></tr>\n" +
+                "    <tr><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Map Discover</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Explore location-based discoveries.</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\"><a href=\"/map\">Go</a></td></tr>\n" +
+                "    <tr><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Saved &amp; Private</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Manage private and saved links.</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\"><a href=\"/saved\">Go</a></td></tr>\n" +
+                "    <tr><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Import</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\">Import bookmarks from external files.</td><td style=\"padding:8px; border-bottom:1px solid #f0f0f0;\"><a href=\"/import\">Go</a></td></tr>\n" +
+                "    <tr><td style=\"padding:8px;\">Settings</td><td style=\"padding:8px;\">Customize account and preferences.</td><td style=\"padding:8px;\"><a href=\"/settings\">Go</a></td></tr>\n" +
+                "  </tbody>\n" +
+                "</table>";
+
+        String organizationAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Organize Bookmarks with Folders and Tags</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li>Create top-level folders by domain (Product, Engineering, Design).</li>\n" +
+                "  <li>Add tags for cross-cutting context (API, UX, Docs, Security).</li>\n" +
+                "  <li>Use folders for structure and tags for searchability.</li>\n" +
+                "  <li>Run a weekly cleanup: merge duplicates and move misplaced links.</li>\n" +
+                "</ol>\n" +
+                "<p style=\"margin-top: 10px;\"><strong>Good tag examples:</strong> <code>backend</code>, <code>spring</code>, <code>career</code>, <code>design-system</code>.</p>";
+
+        String composeModalGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Share a Story Modal - Step by Step Guide</p>\n" +
+                "<p style=\"margin-bottom: 8px;\">This guide follows the actual compose modal UI and explains the best user flow.</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li><strong>Title:</strong> Enter a clear post title in <code>#bmTitle</code>.</li>\n" +
+                "  <li><strong>Location:</strong> Click map to place a marker or use location search.</li>\n" +
+                "  <li><strong>Marker Emoji:</strong> Pick an emoji to personalize your map pin.</li>\n" +
+                "  <li><strong>Photos:</strong> Drag and drop up to 4 photos.</li>\n" +
+                "  <li><strong>Caption + Link:</strong> Add your story and optional URL.</li>\n" +
+                "  <li><strong>Tags + Folder:</strong> Classify content for long-term retrieval.</li>\n" +
+                "  <li><strong>Private option:</strong> Enable private mode when needed.</li>\n" +
+                "  <li><strong>Share:</strong> Click <em>Share</em> to publish.</li>\n" +
+                "</ol>\n" +
+                "<p style=\"font-weight: 600; margin-top: 14px; margin-bottom: 8px;\">Live UI Design Snippet (from your screen)</p>\n" +
+                "<div class=\"modal post-compose-modal\">\n" +
+                "  <h3 id=\"modalTitle\">Share a Story</h3>\n" +
+                "  <form id=\"bookmarkForm\">\n" +
+                "    <div class=\"form-group\"><label for=\"bmTitle\">Title *</label><input type=\"text\" id=\"bmTitle\" class=\"form-control\" placeholder=\"Give your story a title\"/></div>\n" +
+                "    <div class=\"form-group\"><label>Location <span style=\"font-size:0.75rem;color:var(--text-muted);\">(click map to place marker)</span></label><div id=\"composeMap\" class=\"compose-map\"></div><input type=\"text\" id=\"bmLocationSearch\" class=\"form-control\" placeholder=\"Search address...\" style=\"margin-top:6px;\"/></div>\n" +
+                "    <div class=\"form-group\"><label>Map Marker Emoji</label><div class=\"emoji-picker-row\"><button type=\"button\" class=\"btn btn-outline emoji-picker-selected\">&#128205;</button><button type=\"button\" class=\"btn btn-sm btn-outline\">Clear</button></div></div>\n" +
+                "    <div class=\"form-group\"><label>Photos <span style=\"font-size:0.75rem;color:var(--text-muted);\">(max 4)</span></label><div id=\"photoDropZone\" class=\"photo-drop-zone\"><p>Drop photos here or click to browse</p></div></div>\n" +
+                "    <div class=\"form-group\"><label for=\"bmCaption\">Caption / Story</label><textarea id=\"bmCaption\" class=\"form-control\" rows=\"3\" placeholder=\"Share your experience...\"></textarea></div>\n" +
+                "    <div class=\"form-group\"><label for=\"bmUrl\">Link <span style=\"font-size:0.75rem;color:var(--text-muted);\">(optional)</span></label><input type=\"url\" id=\"bmUrl\" class=\"form-control\" placeholder=\"https://...\"/></div>\n" +
+                "    <div class=\"form-group\" style=\"display:flex;align-items:center;gap:8px;\"><input type=\"checkbox\" id=\"bmPrivate\" style=\"width:auto;\"/><label for=\"bmPrivate\" style=\"margin:0;font-size:0.85rem;color:var(--text-secondary);\">Private (only visible to me)</label></div>\n" +
+                "    <div class=\"form-actions\"><button type=\"button\" class=\"btn btn-outline\">Cancel</button><button type=\"submit\" class=\"btn btn-primary\">Share</button></div>\n" +
+                "  </form>\n" +
+                "</div>\n" +
+                "<p style=\"margin-top: 10px;\"><strong>Pro tip:</strong> Write title first, then location, then media. This gives the best post quality and discoverability.</p>";
+
+        String feedPageGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Feed Page Guide (/) - Step by Step</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li>Use <strong>+ Share a Story</strong> to add a new post.</li>\n" +
+                "  <li>Scroll cards to review title, tags, and community activity.</li>\n" +
+                "  <li>Open a card to read details, comments, and related links.</li>\n" +
+                "  <li>Use sidebar folders/tags for quick filtering.</li>\n" +
+                "</ol>\n" +
+                "<div class=\"header-bar\"><h2>Feed</h2><button class=\"btn btn-primary\">+ Share a Story</button></div>\n" +
+                "<p style=\"margin-top: 10px;\">Best for: daily review and fast posting.</p>";
+
+        String mapPageGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Map Discover Guide (/map)</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li>Open Map Discover and zoom to your area of interest.</li>\n" +
+                "  <li>Click markers to inspect stories and attached media.</li>\n" +
+                "  <li>Create a new story with location to improve map quality.</li>\n" +
+                "</ol>\n" +
+                "<div class=\"header-bar\"><h2>Map Discover</h2><button class=\"btn btn-primary\">+ Share a Story</button></div>\n" +
+                "<div id=\"map\" style=\"height:220px;border-radius:10px;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;color:#6b7280;\">Map area preview</div>";
+
+        String savedPageGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Saved &amp; Private Guide (/saved)</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li>Check <strong>Saved</strong> items you bookmarked from others.</li>\n" +
+                "  <li>Manage your <strong>Private</strong> list that only you can see.</li>\n" +
+                "  <li>Move important items into folders for long-term structure.</li>\n" +
+                "</ol>\n" +
+                "<div class=\"header-bar\"><h2>Saved &amp; Private</h2></div>\n" +
+                "<div class=\"bookmark-grid\"><div class=\"bookmark-card\">Saved item example</div><div class=\"bookmark-card\">Private item example</div></div>";
+
+        String searchPageGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Search Guide (/search)</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li>Type focused keywords (topic/tool/tag) in search.</li>\n" +
+                "  <li>Refine using folder/tag context in result cards.</li>\n" +
+                "  <li>Reuse high-value tags from top results for consistency.</li>\n" +
+                "</ol>\n" +
+                "<form class=\"search-form\"><input class=\"search-input\" placeholder=\"Search posts, tags, folders...\"/><button class=\"btn btn-primary\" type=\"button\">Search</button></form>";
+
+        String qnaGuideAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">QnA Page Guide (/qna)</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.7;\">\n" +
+                "  <li>Use category chips to narrow down topics quickly.</li>\n" +
+                "  <li>Use keyword search for exact workflows.</li>\n" +
+                "  <li>Open article detail and give helpful feedback.</li>\n" +
+                "</ol>\n" +
+                "<div class=\"qna-categories\"><span class=\"qna-category-chip active\">All</span><span class=\"qna-category-chip\">Getting Started</span><span class=\"qna-category-chip\">Screens</span></div>\n" +
+                "<div class=\"qna-article-list\"><a class=\"qna-article-card\"><span class=\"qna-article-question\">How should I start using LinkVault?</span></a></div>";
+
+        String dailyRoutineAnswer = "<p style=\"font-weight: 600; margin-bottom: 8px;\">Daily LinkVault Routine (10 Minutes)</p>\n" +
+                "<ol style=\"padding-left: 18px; line-height: 1.8;\">\n" +
+                "  <li><strong>Morning:</strong> Review <a href=\"/\">Feed</a> for latest links.</li>\n" +
+                "  <li><strong>During work:</strong> Save useful links immediately with tags.</li>\n" +
+                "  <li><strong>Afternoon:</strong> Move important links into the right folders.</li>\n" +
+                "  <li><strong>End of day:</strong> Remove duplicates and low-value items.</li>\n" +
+                "  <li><strong>Weekly:</strong> Use <a href=\"/search?keyword=\">Search</a> to audit tag consistency.</li>\n" +
+                "</ol>\n" +
+                "<p style=\"margin-top: 10px;\">Consistency keeps your vault useful and searchable.</p>";
+
+        List<QnaArticle> articles = Arrays.asList(
+                QnaArticle.builder().question("How should I start using LinkVault as a new user?").answer(quickStartAnswer)
+                        .category("Getting Started").tags("onboarding,quick-start,beginner").displayOrder(1)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/\n/saved").createdBy(admin).build(),
+                QnaArticle.builder().question("What does each main screen do, and when should I use it?").answer(screensGuideAnswer)
+                        .category("Screens").tags("feed,map,saved,import,settings").displayOrder(2)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/map\n/saved\n/import\n/settings").createdBy(admin).build(),
+                QnaArticle.builder().question("How can I organize bookmarks effectively with folders and tags?").answer(organizationAnswer)
+                        .category("Bookmark Management").tags("folders,tags,organization,workflow").displayOrder(3)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/\n/qna").createdBy(admin).build(),
+                QnaArticle.builder().question("How do I use the Share a Story modal step by step, with real UI HTML?").answer(composeModalGuideAnswer)
+                        .category("Create Flow").tags("html,compose,share-story,guide").displayOrder(4)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/\n/map\n/saved").createdBy(admin).build(),
+                QnaArticle.builder().question("How do I use the Feed page effectively?").answer(feedPageGuideAnswer)
+                        .category("Screens").tags("feed,workflow,home").displayOrder(5)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/\n/bookmark/1").createdBy(admin).build(),
+                QnaArticle.builder().question("How do I use Map Discover to explore stories?").answer(mapPageGuideAnswer)
+                        .category("Screens").tags("map,location,discover").displayOrder(6)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/map").createdBy(admin).build(),
+                QnaArticle.builder().question("How should I manage Saved & Private content?").answer(savedPageGuideAnswer)
+                        .category("Screens").tags("saved,private,curation").displayOrder(7)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/saved").createdBy(admin).build(),
+                QnaArticle.builder().question("How can I search faster and get better results?").answer(searchPageGuideAnswer)
+                        .category("Screens").tags("search,keyword,tags").displayOrder(8)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/").createdBy(admin).build(),
+                QnaArticle.builder().question("How should I navigate and use the QnA page itself?").answer(qnaGuideAnswer)
+                        .category("Screens").tags("qna,categories,help").displayOrder(9)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/qna").createdBy(admin).build(),
+                QnaArticle.builder().question("What is the best step-by-step routine for daily LinkVault usage?").answer(dailyRoutineAnswer)
+                        .category("Best Practices").tags("daily-routine,productivity,best-practices").displayOrder(10)
+                        .status(QnaStatus.PUBLISHED).relatedLinks("/\n/saved").createdBy(admin).build()
+        );
+
+        qnaArticleRepository.saveAll(articles);
+        log.info("User guide QnA articles initialized: {}", articles.size());
+    }
+
+
 
     private void initBootstrapAdmin() {
         if (userRepository.count() > 0) {
@@ -341,6 +515,35 @@ public class DataInitializer implements CommandLineRunner {
                 .settingValue("5")
                 .description("Number of actioned reports before user account is auto-disabled")
                 .category("MODERATION")
+                .build());
+
+        // Audit policy settings
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("audit.retention.enabled")
+                .settingValue("false")
+                .description("Enable automatic audit log retention cleanup")
+                .category("AUDIT_POLICY")
+                .build());
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("audit.retention.days")
+                .settingValue("365")
+                .description("Days to retain audit log entries (30-3650)")
+                .category("AUDIT_POLICY")
+                .build());
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("audit.delete.mode")
+                .settingValue("SOFT")
+                .description("Retention delete mode: SOFT (archive) or HARD (permanent)")
+                .category("AUDIT_POLICY")
+                .build());
+
+        systemSettingsRepository.save(SystemSettings.builder()
+                .settingKey("audit.masking.level")
+                .settingValue("BASIC")
+                .description("Audit detail masking level: NONE, BASIC, or STRICT")
+                .category("AUDIT_POLICY")
                 .build());
 
         log.info("System settings initialized with defaults");
