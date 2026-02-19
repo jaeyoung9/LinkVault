@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "announcements")
@@ -43,6 +45,22 @@ public class Announcement {
     @Column(nullable = false)
     private boolean pinned = false;
 
+    @Column(nullable = false)
+    private boolean enableComments = false;
+
+    @Column(nullable = false)
+    private boolean enableVoting = false;
+
+    @Column(nullable = false)
+    private int likeCount = 0;
+
+    @Column(nullable = false)
+    private int dislikeCount = 0;
+
+    @OneToMany(mappedBy = "announcement", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private List<AnnouncementPollOption> pollOptions = new ArrayList<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
@@ -55,7 +73,8 @@ public class Announcement {
     @Builder
     public Announcement(String title, String content, AnnouncementPriority priority,
                         AnnouncementStatus status, Role targetRole, LocalDateTime startAt,
-                        LocalDateTime endAt, boolean pinned, User createdBy) {
+                        LocalDateTime endAt, boolean pinned, boolean enableComments,
+                        boolean enableVoting, User createdBy) {
         this.title = title;
         this.content = content;
         this.priority = priority != null ? priority : AnnouncementPriority.INFO;
@@ -64,6 +83,8 @@ public class Announcement {
         this.startAt = startAt;
         this.endAt = endAt;
         this.pinned = pinned;
+        this.enableComments = enableComments;
+        this.enableVoting = enableVoting;
         this.createdBy = createdBy;
     }
 
@@ -78,7 +99,8 @@ public class Announcement {
     }
 
     public void update(String title, String content, AnnouncementPriority priority,
-                       Role targetRole, LocalDateTime startAt, LocalDateTime endAt, boolean pinned) {
+                       Role targetRole, LocalDateTime startAt, LocalDateTime endAt,
+                       boolean pinned, boolean enableComments, boolean enableVoting) {
         this.title = title;
         this.content = content;
         this.priority = priority;
@@ -86,6 +108,8 @@ public class Announcement {
         this.startAt = startAt;
         this.endAt = endAt;
         this.pinned = pinned;
+        this.enableComments = enableComments;
+        this.enableVoting = enableVoting;
     }
 
     public void updateStatus(AnnouncementStatus status) {
@@ -98,5 +122,21 @@ public class Announcement {
 
     public boolean shouldArchive() {
         return status == AnnouncementStatus.PUBLISHED && endAt != null && !endAt.isAfter(LocalDateTime.now());
+    }
+
+    public void incrementLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decrementLikeCount() {
+        if (this.likeCount > 0) this.likeCount--;
+    }
+
+    public void incrementDislikeCount() {
+        this.dislikeCount++;
+    }
+
+    public void decrementDislikeCount() {
+        if (this.dislikeCount > 0) this.dislikeCount--;
     }
 }

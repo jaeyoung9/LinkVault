@@ -34,6 +34,64 @@
                 Content here...
             </div>
 
+            <!-- Like/Dislike Feedback (QnA style) - only when no poll options -->
+            <div th:if="${announcement.enableVoting and (announcement.pollOptions == null or announcement.pollOptions.isEmpty())}"
+                 class="qna-feedback-section" style="margin-top: 24px; padding: 20px; background: var(--bg-card); border-radius: var(--radius);">
+                <p style="font-weight: 600;">Was this announcement helpful?</p>
+                <div class="qna-feedback-buttons" th:unless="${isGuest}">
+                    <button class="qna-feedback-btn" id="annLikeBtn"
+                            th:classappend="${announcement.userVote != null and announcement.userVote.name() == 'LIKE'} ? ' active-helpful'"
+                            onclick="voteAnnouncement('LIKE')">
+                        &#128077; For
+                        <span id="annLikeCount" th:text="${announcement.likeCount}">0</span>
+                    </button>
+                    <button class="qna-feedback-btn" id="annDislikeBtn"
+                            th:classappend="${announcement.userVote != null and announcement.userVote.name() == 'DISLIKE'} ? ' active-not-helpful'"
+                            onclick="voteAnnouncement('DISLIKE')">
+                        &#128078; Against
+                        <span id="annDislikeCount" th:text="${announcement.dislikeCount}">0</span>
+                    </button>
+                </div>
+                <div class="qna-feedback-buttons" th:if="${isGuest}">
+                    <span class="qna-feedback-btn" style="cursor: default;">
+                        &#128077; For <span th:text="${announcement.likeCount}">0</span>
+                    </span>
+                    <span class="qna-feedback-btn" style="cursor: default;">
+                        &#128078; Against <span th:text="${announcement.dislikeCount}">0</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Poll Section -->
+            <div th:if="${announcement.enableVoting and announcement.pollOptions != null and !announcement.pollOptions.isEmpty()}"
+                 id="announcementPollSection">
+                <span class="poll-title">Poll</span>
+
+                <!-- Poll form for logged-in users -->
+                <div th:unless="${isGuest}" id="pollForm">
+                    <label class="poll-option-item" th:each="opt : ${announcement.pollOptions}">
+                        <input type="radio" name="pollOption" th:value="${opt.id}" th:checked="${opt.selected}"/>
+                        <div class="poll-progress-bg" th:style="'width: ' + ${opt.percentage} + '%;'"></div>
+                        <div class="poll-option-content">
+                            <span class="poll-option-text" th:text="${opt.text}">Option</span>
+                            <span class="poll-percentage" th:text="${opt.percentage} + '%'">0%</span>
+                        </div>
+                    </label>
+                    <button class="btn-vote" onclick="submitPollVote()">Vote</button>
+                </div>
+
+                <!-- Read-only results for guests -->
+                <div th:if="${isGuest}">
+                    <div class="poll-option-item" th:each="opt : ${announcement.pollOptions}" style="cursor: default;">
+                        <div class="poll-progress-bg" th:style="'width: ' + ${opt.percentage} + '%;'"></div>
+                        <div class="poll-option-content">
+                            <span class="poll-option-text" th:text="${opt.text}">Option</span>
+                            <span class="poll-percentage" th:text="${opt.percentage} + '%'">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Acknowledge button for CRITICAL announcements -->
             <div class="announcement-acknowledge" th:if="${announcement.priority.name() == 'CRITICAL' and !announcement.acknowledged}">
                 <p style="color: var(--danger); font-weight: 600; margin-bottom: 8px;">
@@ -47,12 +105,37 @@
                  style="margin-top: 16px; padding: 12px; background: rgba(34,197,94,0.1); border-radius: var(--radius); color: var(--success);">
                 &#10003; You have acknowledged this announcement.
             </div>
+
+            <!-- Comment Section -->
+            <div th:if="${announcement.enableComments}" class="comments-section" style="margin-top: 24px;">
+                <h3 style="margin-bottom: 16px;">Comments</h3>
+
+                <!-- Comment form (hidden for guests) -->
+                <div th:unless="${isGuest}" class="comment-form" style="margin-bottom: 20px;">
+                    <textarea id="newCommentContent" class="form-control" rows="3"
+                              placeholder="Write a comment..." style="margin-bottom: 8px;"></textarea>
+                    <div style="text-align: right;">
+                        <button class="btn btn-primary btn-sm" onclick="submitComment()">Post Comment</button>
+                    </div>
+                </div>
+
+                <div id="commentsContainer">
+                    <p id="noComments" style="color: var(--text-muted); font-size: 0.9rem;">No comments yet.</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <div th:replace="~{fragments/layout :: searchModal}"></div>
 <script th:src="@{/js/app.js}"></script>
+<script th:if="${announcement != null}" th:inline="javascript">
+var announcementId = /*[[${announcement.id}]]*/ 0;
+var currentUserId = /*[[${currentUserId}]]*/ 0;
+var enableVoting = /*[[${announcement.enableVoting}]]*/ false;
+var enableComments = /*[[${announcement.enableComments}]]*/ false;
+var hasPollOptions = /*[[${announcement.pollOptions != null and !announcement.pollOptions.isEmpty()}]]*/ false;
+</script>
 <script>
 function acknowledgeAnnouncement(id) {
     fetch('/api/announcements/' + id + '/acknowledge', { method: 'POST', headers: csrfHeaders() })
@@ -67,5 +150,7 @@ function acknowledgeAnnouncement(id) {
         .catch(function() { showToast('Error acknowledging announcement', 'error'); });
 }
 </script>
+<script th:if="${announcement != null and (announcement.enableComments or announcement.enableVoting)}"
+        th:src="@{/js/announcement-comment.js}"></script>
 </body>
 </html>

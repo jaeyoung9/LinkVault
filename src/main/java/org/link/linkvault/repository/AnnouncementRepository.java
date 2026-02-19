@@ -18,6 +18,16 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Long
            "ORDER BY a.pinned DESC, a.createdAt DESC")
     List<Announcement> findPublishedForRole(@Param("role") Role role);
 
+    @Query("SELECT a FROM Announcement a LEFT JOIN FETCH a.createdBy " +
+           "WHERE a.status = 'PUBLISHED' AND a.targetRole IS NULL " +
+           "ORDER BY a.pinned DESC, a.createdAt DESC")
+    List<Announcement> findPublishedForGuest();
+
+    @Query("SELECT a FROM Announcement a LEFT JOIN FETCH a.createdBy " +
+           "WHERE a.status = 'PUBLISHED' " +
+           "ORDER BY a.pinned DESC, a.createdAt DESC")
+    List<Announcement> findAllPublished();
+
     @Query("SELECT a FROM Announcement a WHERE a.status = 'SCHEDULED' AND a.startAt <= :now")
     List<Announcement> findScheduledReadyToPublish(@Param("now") LocalDateTime now);
 

@@ -3,6 +3,7 @@ package org.link.linkvault.controller;
 import lombok.RequiredArgsConstructor;
 import org.link.linkvault.dto.AnnouncementResponseDto;
 import org.link.linkvault.entity.User;
+import org.link.linkvault.entity.VoteType;
 import org.link.linkvault.service.AnnouncementService;
 import org.link.linkvault.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -52,5 +53,25 @@ public class AnnouncementApiController {
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getUserEntity(userDetails.getUsername());
         return ResponseEntity.ok(Map.of("count", announcementService.getUnreadCountForUser(user)));
+    }
+
+    @PostMapping("/{id}/vote")
+    public ResponseEntity<AnnouncementResponseDto> vote(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserEntity(userDetails.getUsername());
+        VoteType voteType = VoteType.valueOf(body.get("voteType"));
+        return ResponseEntity.ok(announcementService.vote(id, voteType, user));
+    }
+
+    @PostMapping("/{id}/poll-vote")
+    public ResponseEntity<AnnouncementResponseDto> pollVote(
+            @PathVariable Long id,
+            @RequestBody Map<String, Long> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserEntity(userDetails.getUsername());
+        Long optionId = body.get("optionId");
+        return ResponseEntity.ok(announcementService.pollVote(id, optionId, user));
     }
 }

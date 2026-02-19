@@ -1352,19 +1352,21 @@ select.form-control { cursor: pointer; }
 }
 .qna-feedback-buttons {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 .qna-feedback-btn {
-    display: inline-flex;
+    flex: 1;
+    display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    background: var(--bg-card);
+    background: var(--bg-secondary);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     transition: all 0.15s;
 }
 .qna-feedback-btn:hover {
@@ -1381,6 +1383,75 @@ select.form-control { cursor: pointer; }
     color: var(--danger);
     background: rgba(239,68,68,0.1);
 }
+
+/* ===== Announcement Poll ===== */
+.poll-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: block;
+}
+.poll-option-item {
+    position: relative;
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: block;
+}
+.poll-option-item input[type="radio"] { display: none; }
+.poll-option-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    z-index: 1;
+    transition: all 0.2s ease;
+}
+.poll-progress-bg {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    border-radius: 9px;
+    z-index: 0;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(59,130,246,0.12);
+}
+.poll-option-item:hover .poll-option-content {
+    border-color: var(--accent);
+}
+.poll-option-item input[type="radio"]:checked ~ .poll-option-content {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+.poll-option-item input[type="radio"]:checked ~ .poll-option-content .poll-option-text {
+    font-weight: 700;
+    color: var(--accent);
+}
+.poll-option-text {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+.poll-percentage {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+.btn-vote {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-top: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.btn-vote:hover { opacity: 0.9; }
 
 /* ===== Announcements Page ===== */
 .announcement-list {

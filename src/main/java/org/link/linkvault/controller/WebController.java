@@ -319,7 +319,7 @@ public class WebController {
         if (userDetails == null) {
             if (!isGuestAccessEnabled()) return "redirect:/login";
             populateGuestModel(model);
-            model.addAttribute("announcements", Collections.emptyList());
+            model.addAttribute("announcements", announcementService.findVisibleForGuest());
             model.addAttribute("pageTitle", "Announcements");
             return "announcements";
         }
@@ -337,7 +337,12 @@ public class WebController {
         if (userDetails == null) {
             if (!isGuestAccessEnabled()) return "redirect:/login";
             populateGuestModel(model);
-            model.addAttribute("announcement", null);
+            try {
+                model.addAttribute("announcement", announcementService.findByIdForGuest(id));
+            } catch (org.link.linkvault.exception.ResourceNotFoundException e) {
+                model.addAttribute("announcement", null);
+            }
+            model.addAttribute("currentUserId", null);
             model.addAttribute("pageTitle", "Announcement");
             return "announcement-detail";
         }
@@ -346,6 +351,7 @@ public class WebController {
         populateCommonModel(model, currentUser);
         announcementService.markAsRead(id, currentUser);
         model.addAttribute("announcement", announcementService.findById(id, currentUser));
+        model.addAttribute("currentUserId", currentUser.getId());
         model.addAttribute("pageTitle", "Announcement");
         return "announcement-detail";
     }

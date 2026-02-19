@@ -124,6 +124,37 @@
                     <span class="toggle-slider"></span>
                 </label>
             </div>
+            <div class="settings-toggle-row" style="margin-bottom: 14px;">
+                <label>Enable Comments</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="annEnableComments"/>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-toggle-row" style="margin-bottom: 14px;">
+                <label>Enable Voting</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="annEnableVoting" onchange="togglePollSection()"/>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div id="pollOptionsSection" style="display: none; margin-bottom: 14px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius);">
+                <label style="font-weight: 600; margin-bottom: 8px; display: block;">Voting Mode</label>
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem;">
+                        <input type="radio" name="votingMode" value="simple" checked onchange="updateVotingMode()"/>
+                        Like / Dislike
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem;">
+                        <input type="radio" name="votingMode" value="poll" onchange="updateVotingMode()"/>
+                        Poll (custom options)
+                    </label>
+                </div>
+                <div id="pollOptionsInputArea" style="display: none;">
+                    <div id="pollOptionsList"></div>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="addPollOption()" style="margin-top: 8px;">+ Add Option</button>
+                </div>
+            </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="closeAnnModal()">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save</button>
@@ -134,11 +165,64 @@
 
 <script th:src="@{/js/admin.js}"></script>
 <script>
+function togglePollSection() {
+    var section = document.getElementById('pollOptionsSection');
+    section.style.display = document.getElementById('annEnableVoting').checked ? '' : 'none';
+    if (document.getElementById('annEnableVoting').checked) {
+        updateVotingMode();
+    }
+}
+
+function updateVotingMode() {
+    var mode = document.querySelector('input[name="votingMode"]:checked').value;
+    var area = document.getElementById('pollOptionsInputArea');
+    area.style.display = mode === 'poll' ? '' : 'none';
+    if (mode === 'simple') {
+        clearPollOptions();
+    } else if (document.querySelectorAll('.poll-option-input').length === 0) {
+        addPollOption();
+        addPollOption();
+    }
+}
+
+function addPollOption(value) {
+    var list = document.getElementById('pollOptionsList');
+    var row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 6px; align-items: center;';
+    row.innerHTML =
+        '<input type="text" class="form-control poll-option-input" placeholder="Option text" value="' + (value ? escapeAttrAdmin(value) : '') + '" style="flex: 1;"/>' +
+        '<button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()" style="padding: 4px 10px;">X</button>';
+    list.appendChild(row);
+}
+
+function escapeAttrAdmin(s) {
+    return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getPollOptions() {
+    var mode = document.querySelector('input[name="votingMode"]:checked');
+    if (mode && mode.value === 'simple') return null;
+    var inputs = document.querySelectorAll('.poll-option-input');
+    var options = [];
+    inputs.forEach(function(input) {
+        var val = input.value.trim();
+        if (val) options.push(val);
+    });
+    return options.length > 0 ? options : null;
+}
+
+function clearPollOptions() {
+    document.getElementById('pollOptionsList').innerHTML = '';
+}
+
 function openAnnModal() {
     document.getElementById('annModal').classList.add('active');
     document.getElementById('annModalTitle').textContent = 'New Announcement';
     document.getElementById('annForm').reset();
     document.getElementById('annId').value = '';
+    clearPollOptions();
+    document.querySelector('input[name="votingMode"][value="simple"]').checked = true;
+    togglePollSection();
 }
 
 function closeAnnModal() {
@@ -156,8 +240,18 @@ function editAnn(id) {
             document.getElementById('annPriority').value = a.priority;
             document.getElementById('annTarget').value = a.targetRole || '';
             document.getElementById('annPinned').checked = a.pinned;
+            document.getElementById('annEnableComments').checked = a.enableComments;
+            document.getElementById('annEnableVoting').checked = a.enableVoting;
             if (a.startAt) document.getElementById('annStartAt').value = a.startAt.substring(0, 16);
             if (a.endAt) document.getElementById('annEndAt').value = a.endAt.substring(0, 16);
+            clearPollOptions();
+            if (a.pollOptions && a.pollOptions.length > 0) {
+                document.querySelector('input[name="votingMode"][value="poll"]').checked = true;
+                a.pollOptions.forEach(function(opt) { addPollOption(opt.text); });
+            } else {
+                document.querySelector('input[name="votingMode"][value="simple"]').checked = true;
+            }
+            togglePollSection();
         })
         .catch(function(err) {
             var msg = (err && err.status === 403) ? 'Insufficient permission' :
@@ -176,8 +270,11 @@ function saveAnn(e) {
         priority: document.getElementById('annPriority').value,
         targetRole: document.getElementById('annTarget').value || null,
         pinned: document.getElementById('annPinned').checked,
+        enableComments: document.getElementById('annEnableComments').checked,
+        enableVoting: document.getElementById('annEnableVoting').checked,
         startAt: document.getElementById('annStartAt').value || null,
-        endAt: document.getElementById('annEndAt').value || null
+        endAt: document.getElementById('annEndAt').value || null,
+        pollOptions: getPollOptions()
     };
 
     var method = id ? 'PUT' : 'POST';

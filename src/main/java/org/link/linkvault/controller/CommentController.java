@@ -35,6 +35,14 @@ public class CommentController {
         return ResponseEntity.ok(commentService.getCommentsForBookmark(bookmarkId, user));
     }
 
+    @GetMapping("/announcement/{announcementId}")
+    public ResponseEntity<List<CommentResponseDto>> getAnnouncementComments(
+            @PathVariable Long announcementId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userDetails != null ? userService.getUserEntity(userDetails.getUsername()) : null;
+        return ResponseEntity.ok(commentService.getCommentsForAnnouncement(announcementId, user));
+    }
+
     @PostMapping
     @PreAuthorize("hasAuthority('COMMENT')")
     public ResponseEntity<CommentResponseDto> createComment(

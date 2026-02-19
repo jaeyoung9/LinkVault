@@ -6,6 +6,7 @@ import org.link.linkvault.dto.CommentResponseDto;
 import org.link.linkvault.dto.CommentVoteResponseDto;
 import org.link.linkvault.entity.*;
 import org.link.linkvault.exception.ResourceNotFoundException;
+import org.link.linkvault.repository.AnnouncementRepository;
 import org.link.linkvault.repository.BookmarkRepository;
 import org.link.linkvault.repository.CommentRepository;
 import org.link.linkvault.repository.CommentVoteRepository;
@@ -25,6 +26,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final CommentVoteRepository commentVoteRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final AnnouncementRepository announcementRepository;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
 
@@ -40,6 +42,32 @@ public class CommentService {
         }
 
         // Build tree from flat list
+        Map<Long, List<Comment>> childrenMap = new HashMap<>();
+        List<Comment> rootComments = new ArrayList<>();
+
+        for (Comment comment : allComments) {
+            if (comment.getParent() == null) {
+                rootComments.add(comment);
+            } else {
+                childrenMap.computeIfAbsent(comment.getParent().getId(), k -> new ArrayList<>()).add(comment);
+            }
+        }
+
+        return rootComments.stream()
+                .map(c -> buildCommentTree(c, childrenMap, userVotes, currentUser))
+                .collect(Collectors.toList());
+    }
+
+    public List<CommentResponseDto> getCommentsForAnnouncement(Long announcementId, User currentUser) {
+        List<Comment> allComments = commentRepository.findAllByAnnouncementId(announcementId);
+
+        List<Long> commentIds = allComments.stream().map(Comment::getId).collect(Collectors.toList());
+        Map<Long, VoteType> userVotes = new HashMap<>();
+        if (currentUser != null && !commentIds.isEmpty()) {
+            commentVoteRepository.findByUserIdAndCommentIdIn(currentUser.getId(), commentIds)
+                    .forEach(v -> userVotes.put(v.getComment().getId(), v.getVoteType()));
+        }
+
         Map<Long, List<Comment>> childrenMap = new HashMap<>();
         List<Comment> rootComments = new ArrayList<>();
 
@@ -82,7 +110,8 @@ public class CommentService {
                 .content(comment.getContent())
                 .username(comment.getUser().getUsername())
                 .userId(comment.getUser().getId())
-                .bookmarkId(comment.getBookmark().getId())
+                .bookmarkId(comment.getBookmark() != null ? comment.getBookmark().getId() : null)
+                .announcementId(comment.getAnnouncement() != null ? comment.getAnnouncement().getId() : null)
                 .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
                 .parentUsername(parentUsername)
                 .depth(comment.getDepth())
@@ -112,8 +141,20 @@ public class CommentService {
 
     @Transactional
     public CommentResponseDto create(CommentRequestDto dto, User user) {
-        Bookmark bookmark = bookmarkRepository.findById(dto.getBookmarkId())
-                .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found: " + dto.getBookmarkId()));
+        if (dto.getBookmarkId() == null && dto.getAnnouncementId() == null) {
+            throw new IllegalArgumentException("Either bookmarkId or announcementId is required");
+        }
+
+        Bookmark bookmark = null;
+        Announcement announcement = null;
+
+        if (dto.getAnnouncementId() != null) {
+            announcement = announcementRepository.findById(dto.getAnnouncementId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Announcement not found: " + dto.getAnnouncementId()));
+        } else {
+            bookmark = bookmarkRepository.findById(dto.getBookmarkId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Bookmark not found: " + dto.getBookmarkId()));
+        }
 
         Comment parent = null;
         int depth = 0;
@@ -131,18 +172,20 @@ public class CommentService {
                 .content(dto.getContent())
                 .user(user)
                 .bookmark(bookmark)
+                .announcement(announcement)
                 .parent(parent)
                 .depth(depth)
                 .build();
 
         comment = commentRepository.save(comment);
-        bookmark.incrementCommentCount();
+        if (bookmark != null) {
+            bookmark.incrementCommentCount();
+        }
 
         // Trigger notifications
         if (comment.getParent() != null) {
             notificationService.notifyReply(comment, user);
-        } else {
-            // Top-level comment: notify the bookmark owner
+        } else if (bookmark != null) {
             notificationService.notifyComment(comment, user);
         }
         notificationService.notifyMentions(comment, user);
@@ -173,11 +216,16 @@ public class CommentService {
         }
 
         comment.softDelete();
-        comment.getBookmark().decrementCommentCount();
+        if (comment.getBookmark() != null) {
+            comment.getBookmark().decrementCommentCount();
+        }
 
         if (isModerator) {
+            String targetId = comment.getBookmark() != null
+                    ? String.valueOf(comment.getBookmark().getId())
+                    : (comment.getAnnouncement() != null ? "ann:" + comment.getAnnouncement().getId() : "unknown");
             auditLogService.log(user.getUsername(), AuditActionCodes.COMMENT_SOFT_DELETE, "Comment", commentId,
-                    AuditDetailFormatter.format("bookmarkId", String.valueOf(comment.getBookmark().getId()),
+                    AuditDetailFormatter.format("targetId", targetId,
                             "owner", comment.getUser().getUsername(), "moderatorAction", "true"));
         }
     }
@@ -243,10 +291,15 @@ public class CommentService {
             throw new IllegalStateException("Comment is not deleted");
         }
         comment.restore();
-        comment.getBookmark().incrementCommentCount();
+        if (comment.getBookmark() != null) {
+            comment.getBookmark().incrementCommentCount();
+        }
 
+        String targetId = comment.getBookmark() != null
+                ? String.valueOf(comment.getBookmark().getId())
+                : (comment.getAnnouncement() != null ? "ann:" + comment.getAnnouncement().getId() : "unknown");
         auditLogService.log(actorUsername, AuditActionCodes.COMMENT_RESTORE, "Comment", commentId,
-                AuditDetailFormatter.format("bookmarkId", String.valueOf(comment.getBookmark().getId()),
+                AuditDetailFormatter.format("targetId", targetId,
                         "owner", comment.getUser().getUsername()));
     }
 
@@ -267,8 +320,11 @@ public class CommentService {
         // 3. Delete the comment
         commentRepository.delete(comment);
 
+        String purgeTargetId = comment.getBookmark() != null
+                ? String.valueOf(comment.getBookmark().getId())
+                : (comment.getAnnouncement() != null ? "ann:" + comment.getAnnouncement().getId() : "unknown");
         auditLogService.log(actorUsername, AuditActionCodes.COMMENT_PURGE, "Comment", commentId,
-                AuditDetailFormatter.format("bookmarkId", String.valueOf(comment.getBookmark().getId()),
+                AuditDetailFormatter.format("targetId", purgeTargetId,
                         "owner", comment.getUser().getUsername()));
     }
 }

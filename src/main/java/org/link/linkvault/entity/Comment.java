@@ -14,7 +14,8 @@ import java.util.List;
 @Table(name = "comments", indexes = {
         @Index(name = "idx_comment_bookmark", columnList = "bookmark_id"),
         @Index(name = "idx_comment_user", columnList = "user_id"),
-        @Index(name = "idx_comment_parent", columnList = "parent_id")
+        @Index(name = "idx_comment_parent", columnList = "parent_id"),
+        @Index(name = "idx_comment_announcement", columnList = "announcement_id")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -32,8 +33,12 @@ public class Comment {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bookmark_id", nullable = false)
+    @JoinColumn(name = "bookmark_id")
     private Bookmark bookmark;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "announcement_id")
+    private Announcement announcement;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
@@ -72,10 +77,12 @@ public class Comment {
     }
 
     @Builder
-    public Comment(String content, User user, Bookmark bookmark, Comment parent, int depth) {
+    public Comment(String content, User user, Bookmark bookmark, Announcement announcement,
+                   Comment parent, int depth) {
         this.content = content;
         this.user = user;
         this.bookmark = bookmark;
+        this.announcement = announcement;
         this.parent = parent;
         this.depth = depth;
     }

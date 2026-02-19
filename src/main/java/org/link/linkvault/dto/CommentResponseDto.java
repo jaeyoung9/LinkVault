@@ -17,6 +17,7 @@ public class CommentResponseDto {
     private String username;
     private Long userId;
     private Long bookmarkId;
+    private Long announcementId;
     private Long parentId;
     private String parentUsername;
     private int depth;
@@ -39,7 +40,8 @@ public class CommentResponseDto {
                 .content(comment.getContent())
                 .username(comment.getUser().getUsername())
                 .userId(comment.getUser().getId())
-                .bookmarkId(comment.getBookmark().getId())
+                .bookmarkId(comment.getBookmark() != null ? comment.getBookmark().getId() : null)
+                .announcementId(comment.getAnnouncement() != null ? comment.getAnnouncement().getId() : null)
                 .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
                 .depth(comment.getDepth())
                 .likeCount(comment.getLikeCount())

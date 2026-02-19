@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
 @Getter
@@ -19,8 +18,9 @@ public class CommentRequestDto {
     @Size(max = 2000, message = "Comment must be 2000 characters or less")
     private String content;
 
-    @NotNull(message = "Bookmark ID is required")
     private Long bookmarkId;
+
+    private Long announcementId;
 
     private Long parentId;
 }

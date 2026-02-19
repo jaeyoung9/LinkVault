@@ -53,7 +53,7 @@ public class SecurityConfig {
                         "/policies/**").permitAll()
                 // Guest read-only APIs
                 .antMatchers(HttpMethod.GET, "/api/search").permitAll()
-                .antMatchers(HttpMethod.GET, "/api/comments/bookmark/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/comments/bookmark/**", "/api/comments/announcement/**").permitAll()
                 // Guest event tracking + ad feedback
                 .antMatchers(HttpMethod.POST, "/api/guest/event").permitAll()
                 .antMatchers(HttpMethod.POST, "/api/ad/hide").permitAll()

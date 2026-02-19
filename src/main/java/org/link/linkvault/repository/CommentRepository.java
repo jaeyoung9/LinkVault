@@ -16,7 +16,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("SELECT c FROM Comment c JOIN FETCH c.user WHERE c.bookmark.id = :bookmarkId AND c.parent IS NULL ORDER BY c.createdAt ASC")
     List<Comment> findTopLevelByBookmarkId(@Param("bookmarkId") Long bookmarkId);
 
-    @Query("SELECT c FROM Comment c JOIN FETCH c.user JOIN FETCH c.bookmark ORDER BY c.createdAt DESC")
+    @Query("SELECT c FROM Comment c JOIN FETCH c.user WHERE c.announcement.id = :announcementId ORDER BY c.createdAt ASC")
+    List<Comment> findAllByAnnouncementId(@Param("announcementId") Long announcementId);
+
+    @Query("SELECT c FROM Comment c JOIN FETCH c.user LEFT JOIN FETCH c.bookmark LEFT JOIN FETCH c.announcement ORDER BY c.createdAt DESC")
     List<Comment> findAllWithUserAndBookmark();
 
     long countByBookmarkId(Long bookmarkId);
