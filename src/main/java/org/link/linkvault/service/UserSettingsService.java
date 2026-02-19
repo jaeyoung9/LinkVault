@@ -83,6 +83,17 @@ public class UserSettingsService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public void completeGuidelines(User user) {
+        UserSettings settings = getOrCreateSettings(user);
+        settings.completeGuidelines();
+    }
+
+    public boolean isGuidelinesCompleted(User user) {
+        UserSettings settings = getOrCreateSettings(user);
+        return settings.isGuidelinesCompleted();
+    }
+
     public Theme getThemeForUser(Long userId) {
         return userSettingsRepository.findThemeByUserId(userId).orElse(Theme.DARK);
     }

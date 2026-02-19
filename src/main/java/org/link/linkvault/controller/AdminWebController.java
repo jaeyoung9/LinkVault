@@ -157,6 +157,12 @@ public class AdminWebController {
         return "admin/privacy-policy";
     }
 
+    @GetMapping("/guidelines")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public String guidelines() {
+        return "admin/guidelines";
+    }
+
     @GetMapping("/settings")
     @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
     public String settings(Model model) {

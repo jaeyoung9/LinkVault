@@ -51,6 +51,7 @@ public class AdminApiController {
     private final StripeService stripeService;
     private final org.link.linkvault.repository.AdFreePassRepository adFreePassRepository;
     private final AccountLockoutService accountLockoutService;
+    private final GuidelineStepService guidelineStepService;
 
     // --- User CRUD ---
 
@@ -650,5 +651,63 @@ public class AdminApiController {
             @AuthenticationPrincipal UserDetails userDetails) {
         stripeService.refundPayment(paymentIntentId);
         return ResponseEntity.ok(Map.of("message", "Refund initiated for " + paymentIntentId));
+    }
+
+    // --- Guideline Step Management ---
+
+    @GetMapping("/guideline-steps")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<List<GuidelineStepResponseDto>> getAllGuidelineSteps() {
+        return ResponseEntity.ok(guidelineStepService.findAll());
+    }
+
+    @GetMapping("/guideline-steps/screen/{screen}")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<List<GuidelineStepResponseDto>> getGuidelineStepsByScreen(@PathVariable String screen) {
+        return ResponseEntity.ok(guidelineStepService.findByScreen(screen));
+    }
+
+    @PostMapping("/guideline-steps")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<GuidelineStepResponseDto> createGuidelineStep(
+            @Valid @RequestBody GuidelineStepRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        GuidelineStepResponseDto result = guidelineStepService.create(dto, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
+    @PutMapping("/guideline-steps/{id}")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<GuidelineStepResponseDto> updateGuidelineStep(
+            @PathVariable Long id,
+            @Valid @RequestBody GuidelineStepRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(guidelineStepService.update(id, dto, userDetails.getUsername()));
+    }
+
+    @DeleteMapping("/guideline-steps/{id}")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<Void> deleteGuidelineStep(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        guidelineStepService.delete(id, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/guideline-steps/{id}/toggle")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<GuidelineStepResponseDto> toggleGuidelineStep(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(guidelineStepService.toggleEnabled(id, userDetails.getUsername()));
+    }
+
+    @PatchMapping("/guideline-steps/reorder")
+    @PreAuthorize("hasAuthority('SYSTEM_SETTINGS')")
+    public ResponseEntity<Map<String, String>> reorderGuidelineSteps(
+            @RequestBody List<GuidelineStepOrderDto> orders,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        guidelineStepService.reorder(orders, userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Guideline steps reordered"));
     }
 }

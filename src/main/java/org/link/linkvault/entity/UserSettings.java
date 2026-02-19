@@ -42,6 +42,9 @@ public class UserSettings {
     @Column(nullable = false)
     private boolean twoFactorEnabled = false;
 
+    @Column(nullable = false)
+    private boolean guidelinesCompleted = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -75,5 +78,9 @@ public class UserSettings {
     public void updatePrivacy(ProfileVisibility visibility, boolean showEmail) {
         this.profileVisibility = visibility;
         this.showEmail = showEmail;
+    }
+
+    public void completeGuidelines() {
+        this.guidelinesCompleted = true;
     }
 }

@@ -16,6 +16,7 @@ public class UserSettingsResponseDto {
     private ProfileVisibility profileVisibility;
     private boolean showEmail;
     private boolean twoFactorEnabled;
+    private boolean guidelinesCompleted;
 
     public static UserSettingsResponseDto from(UserSettings s) {
         return UserSettingsResponseDto.builder()
@@ -26,6 +27,7 @@ public class UserSettingsResponseDto {
                 .profileVisibility(s.getProfileVisibility())
                 .showEmail(s.isShowEmail())
                 .twoFactorEnabled(s.isTwoFactorEnabled())
+                .guidelinesCompleted(s.isGuidelinesCompleted())
                 .build();
     }
 }

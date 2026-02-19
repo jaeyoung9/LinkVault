@@ -147,6 +147,9 @@
     <div th:replace="~{fragments/cookie-consent :: cookieConsent}"></div>
 </th:block>
 
+<!-- Onboarding tour (authenticated users only) -->
+<script th:if="${currentUser != null}" th:src="@{/js/onboarding.js}"></script>
+
 </th:block>
 
 <!-- Dynamic Menu Item Fragment (recursive) -->

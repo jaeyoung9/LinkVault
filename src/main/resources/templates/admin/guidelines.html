@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Onboarding Console - Admin - LinkVault</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+    <div class="main-content onboard-main">
+        <div class="onboard-header">
+            <h2>Onboarding Console</h2>
+            <button class="btn btn-primary btn-sm" onclick="publishAll()">Publish All</button>
+        </div>
+
+        <div class="onboard-split">
+            <!-- ========== LEFT: Control Panel ========== -->
+            <div class="onboard-left" id="controlPanel">
+                <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</div>
+            </div>
+
+            <!-- ========== RIGHT: Simulator ========== -->
+            <div class="onboard-right">
+                <div class="sim-bar">
+                    <span class="sim-label">CLIENT APP SIMULATOR (EN-US)</span>
+                    <span class="sim-live">LIVE PREVIEW</span>
+                </div>
+                <div id="simFrame">
+                    <div id="simScreen"></div>
+                    <div id="simWelcomeModal">
+                        <div class="wm-box">
+                            <h3 id="wmTitle">Welcome to LinkVault!</h3>
+                            <p id="wmDesc">Let us show you around.</p>
+                            <button onclick="hideWelcomePreview()">Start Tour</button>
+                        </div>
+                    </div>
+                    <div id="simSpotlight"></div>
+                    <div id="simTooltip"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
+<script>
+/* ===== State ===== */
+var settings = {};
+var allSteps = [];
+var currentScreen = 'feed';
+var editingStepId = null;
+var previewingIndex = -1;
+
+var SCREENS = ['feed', 'map', 'saved', 'import', 'settings'];
+
+var TARGET_MAP = {
+    feed:     ['sidebar', 'search-bar', 'share-button', 'frequent-bar', 'post-grid', 'post-card'],
+    map:      ['sidebar', 'map-area', 'map-search', 'share-button'],
+    saved:    ['sidebar', 'tabs', 'post-grid', 'new-private-btn'],
+    'import': ['sidebar', 'import-zone-json', 'import-zone-html'],
+    settings: ['sidebar', 'tabs', 'theme-options', 'toggle-row']
+};
+
+/* ===== Simulator Sidebar (reused across all screens) ===== */
+var SIM_SIDEBAR =
+    '<div class="sim-sidebar" data-target="sidebar">' +
+        '<div class="sim-sb-brand">LinkVault<br/><span style="font-weight:400;font-size:0.48rem;color:#94a3b8;">Share Places &amp; Stories</span></div>' +
+        '<div class="sim-sb-link active">Feed</div>' +
+        '<div class="sim-sb-link">Map Discover</div>' +
+        '<div class="sim-sb-link">Saved</div>' +
+        '<div class="sim-sb-section">Folders</div>' +
+        '<div class="sim-sb-link">Unsorted</div>' +
+        '<div class="sim-sb-link" style="padding-left:12px;">Work</div>' +
+        '<div class="sim-sb-link" style="padding-left:12px;">Travel</div>' +
+        '<div class="sim-sb-section">Tags</div>' +
+        '<div style="padding:2px 6px;"><span class="sim-sb-tag">travel</span><span class="sim-sb-tag">food</span><span class="sim-sb-tag">tech</span><span class="sim-sb-tag">design</span></div>' +
+        '<div style="flex:1;"></div>' +
+        '<div style="border-top:1px solid #475569;padding-top:6px;margin-top:auto;">' +
+            '<div class="sim-sb-link">QnA Guide</div>' +
+            '<div class="sim-sb-link">Settings</div>' +
+            '<div class="sim-sb-link" style="color:#64748b;">Logout</div>' +
+        '</div>' +
+    '</div>';
+
+/* ===== Mock Screens (matching actual LinkVault dark-theme UI) ===== */
+var MOCK_SCREENS = {
+    feed: '<div class="sim-layout">' + SIM_SIDEBAR +
+        '<div class="sim-main">' +
+            '<div class="sim-header">' +
+                '<h4>Feed</h4>' +
+                '<div style="display:flex;gap:4px;align-items:center;">' +
+                    '<div data-target="search-bar" class="sim-search-row" style="margin:0;">' +
+                        '<input class="sim-search" style="margin:0;width:90px;" placeholder="Search posts..." readonly/>' +
+                        '<button class="sim-btn sim-btn-primary" style="font-size:0.6rem;">Search</button>' +
+                    '</div>' +
+                    '<button class="sim-btn sim-btn-primary" data-target="share-button">+ Share a Story</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="sim-body">' +
+                '<div data-target="frequent-bar" class="sim-freq-bar">' +
+                    '<span class="sim-freq-chip">&#127758; Seoul Guide</span>' +
+                    '<span class="sim-freq-chip">&#9749; Cafe List</span>' +
+                    '<span class="sim-freq-chip">&#128187; React Tips</span>' +
+                '</div>' +
+                '<div data-target="post-grid">' +
+                    '<div class="sim-card" data-target="post-card">' +
+                        '<div class="sim-card-img">&#128247;</div>' +
+                        '<div class="sim-card-body">' +
+                            '<div class="sim-card-title">Exploring Seoul</div>' +
+                            '<div class="sim-card-loc">&#128205; Bukchon Hanok Village</div>' +
+                            '<div class="sim-card-desc">A walking tour with photo spots and cafe recommendations.</div>' +
+                            '<div class="sim-card-meta"><span>by admin</span><span>3 comments</span><span>Views: 42</span></div>' +
+                            '<div class="sim-card-tags"><span>travel</span><span>seoul</span></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="sim-card">' +
+                        '<div class="sim-card-img">&#128247;</div>' +
+                        '<div class="sim-card-body">' +
+                            '<div class="sim-card-title">React Best Practices</div>' +
+                            '<div class="sim-card-desc">Component patterns and performance optimization.</div>' +
+                            '<div class="sim-card-meta"><span>by user</span><span>Comment</span><span>Views: 18</span></div>' +
+                            '<div class="sim-card-tags"><span>tech</span><span>react</span></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>',
+
+    map: '<div class="sim-layout">' + SIM_SIDEBAR.replace('class="sim-sb-link active">Feed', 'class="sim-sb-link">Feed').replace('class="sim-sb-link">Map Discover', 'class="sim-sb-link active">Map Discover') +
+        '<div class="sim-main">' +
+            '<div class="sim-header">' +
+                '<h4>Map Discover</h4>' +
+                '<button class="sim-btn sim-btn-primary" data-target="share-button">+ Share a Story</button>' +
+            '</div>' +
+            '<div class="sim-body" style="padding:0;position:relative;">' +
+                '<div data-target="map-search" style="padding:6px 10px;">' +
+                    '<input class="sim-search" style="margin:0;" placeholder="Search posts or places..." readonly/>' +
+                '</div>' +
+                '<div data-target="map-area" class="sim-map-area" style="margin:0;border-radius:0;height:auto;flex:1;min-height:340px;">' +
+                    '<span style="position:absolute;top:25%;left:35%;font-size:1.3rem;">&#128205;</span>' +
+                    '<span style="position:absolute;top:50%;left:60%;font-size:1.3rem;">&#128205;</span>' +
+                    '<span style="position:absolute;top:40%;left:20%;font-size:1.3rem;">&#9749;</span>' +
+                    '<span style="opacity:0.5;">Leaflet Map</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>',
+
+    saved: '<div class="sim-layout">' + SIM_SIDEBAR.replace('class="sim-sb-link active">Feed', 'class="sim-sb-link">Feed').replace('class="sim-sb-link">Saved', 'class="sim-sb-link active">Saved') +
+        '<div class="sim-main">' +
+            '<div class="sim-header">' +
+                '<h4>Saved &amp; Private</h4>' +
+                '<button class="sim-btn sim-btn-primary" data-target="share-button">+ Share a Story</button>' +
+            '</div>' +
+            '<div class="sim-body">' +
+                '<div class="sim-tabs" data-target="tabs">' +
+                    '<span class="sim-tab active">Saved Posts (3)</span><span class="sim-tab">My Private Posts (1)</span>' +
+                '</div>' +
+                '<div data-target="post-grid">' +
+                    '<div class="sim-card">' +
+                        '<div class="sim-card-img">&#128247;</div>' +
+                        '<div class="sim-card-body">' +
+                            '<div class="sim-card-title">Design Systems Guide</div>' +
+                            '<div class="sim-card-desc">Component library patterns and architecture.</div>' +
+                            '<div class="sim-card-tags"><span>design</span><span>ux</span></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="sim-card">' +
+                        '<div class="sim-card-img">&#128247;</div>' +
+                        '<div class="sim-card-body">' +
+                            '<div class="sim-card-title">API Security Checklist</div>' +
+                            '<div class="sim-card-desc">Authentication, rate limiting best practices.</div>' +
+                            '<div class="sim-card-tags"><span>security</span><span>api</span></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="display:none;" data-target="new-private-btn"><button class="sim-btn sim-btn-primary">+ New Private Post</button></div>' +
+            '</div>' +
+        '</div>' +
+    '</div>',
+
+    'import': '<div class="sim-layout">' + SIM_SIDEBAR.replace('class="sim-sb-link active">Feed', 'class="sim-sb-link">Feed') +
+        '<div class="sim-main">' +
+            '<div class="sim-header"><h4>Import Bookmarks</h4></div>' +
+            '<div class="sim-body">' +
+                '<div class="sim-import-grid">' +
+                    '<div style="background:#334155;border:1px solid #475569;border-radius:8px;padding:10px;">' +
+                        '<div style="font-size:0.72rem;font-weight:600;margin-bottom:6px;">Import JSON</div>' +
+                        '<div style="font-size:0.6rem;color:#64748b;margin-bottom:8px;">LinkVault JSON export format.</div>' +
+                        '<div class="sim-dropzone" data-target="import-zone-json" style="margin-bottom:6px;">Select a .json file</div>' +
+                        '<button class="sim-btn sim-btn-primary" style="width:100%;">Import JSON</button>' +
+                    '</div>' +
+                    '<div style="background:#334155;border:1px solid #475569;border-radius:8px;padding:10px;">' +
+                        '<div style="font-size:0.72rem;font-weight:600;margin-bottom:6px;">Import HTML</div>' +
+                        '<div style="font-size:0.6rem;color:#64748b;margin-bottom:8px;">Browser bookmark export.</div>' +
+                        '<div class="sim-dropzone" data-target="import-zone-html" style="margin-bottom:6px;">Select a .html file</div>' +
+                        '<button class="sim-btn sim-btn-primary" style="width:100%;">Import HTML</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>',
+
+    settings: '<div class="sim-layout">' + SIM_SIDEBAR.replace('class="sim-sb-link active">Feed', 'class="sim-sb-link">Feed') +
+        '<div class="sim-main">' +
+            '<div class="sim-header"><h4>Settings</h4></div>' +
+            '<div class="sim-body">' +
+                '<div class="sim-tabs" data-target="tabs">' +
+                    '<span class="sim-tab active">Appearance</span><span class="sim-tab">Notifications</span><span class="sim-tab">Privacy</span><span class="sim-tab">Account</span>' +
+                '</div>' +
+                '<div style="background:#334155;border:1px solid #475569;border-radius:8px;padding:10px;margin-bottom:8px;">' +
+                    '<div style="font-size:0.72rem;font-weight:600;margin-bottom:4px;">Theme</div>' +
+                    '<div style="font-size:0.6rem;color:#64748b;margin-bottom:8px;">Choose your preferred theme.</div>' +
+                    '<div data-target="theme-options" class="sim-theme-opt">' +
+                        '<span style="background:#0f172a;"></span><span style="background:#fff;"></span>' +
+                    '</div>' +
+                '</div>' +
+                '<div data-target="toggle-row" style="background:#334155;border:1px solid #475569;border-radius:8px;padding:10px;">' +
+                    '<div style="font-size:0.72rem;font-weight:600;margin-bottom:6px;">Notification Preferences</div>' +
+                    '<div class="sim-toggle-row"><span>Email Notifications</span><div class="sim-toggle"></div></div>' +
+                    '<div class="sim-toggle-row"><span>Browser Notifications</span><div class="sim-toggle"></div></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>'
+};
+
+/* ===== Helpers ===== */
+function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function val(key) {
+    return settings[key] ? settings[key].settingValue : '';
+}
+
+function isTrue(key) {
+    return val(key) === 'true';
+}
+
+function screenSteps() {
+    return allSteps.filter(function(s) { return s.screen === currentScreen; });
+}
+
+/* ===== Load All ===== */
+function loadAll() {
+    Promise.all([
+        adminFetch('/api/admin/settings/category/GUIDELINES'),
+        adminFetch('/api/admin/guideline-steps')
+    ]).then(function(results) {
+        settings = {};
+        results[0].forEach(function(s) { settings[s.settingKey] = s; });
+        allSteps = results[1];
+        render();
+    }).catch(function(err) {
+        var msg = (err && err.status === 403) ? 'Insufficient permission' : (err && err.message) || 'Error loading data';
+        document.getElementById('controlPanel').innerHTML =
+            '<div style="text-align:center;padding:40px;color:var(--danger);">' + escHtml(msg) + '</div>';
+    });
+}
+
+/* ===== Render All ===== */
+function render() {
+    var cp = document.getElementById('controlPanel');
+    cp.innerHTML = renderGlobalPolicy() + renderWelcomeSection() + renderScreenTabs() + renderStepsList();
+    renderMockScreen(currentScreen);
+}
+
+/* ===== Global Policy ===== */
+function renderGlobalPolicy() {
+    return '<div class="ob-section">' +
+        '<h3>Global Policy</h3>' +
+        renderToggle('guideline.enabled', 'Enable Guidelines', 'Show onboarding guidelines to users') +
+        renderToggle('guideline.dismissible', 'Dismissible', 'Allow users to dismiss/skip') +
+        renderSelect('guideline.default-mode', 'Display Mode', ['TOOLTIP', 'MODAL', 'CHECKLIST'], 'How guidelines are presented') +
+        renderToggle('guideline.first-login-only', 'First Login Only', 'Show only on first login') +
+    '</div>';
+}
+
+function renderToggle(key, label, description) {
+    var checked = isTrue(key) ? ' checked' : '';
+    return '<div class="settings-toggle-row" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">' +
+        '<div style="flex:1;">' +
+            '<div style="font-weight:500;font-size:0.88rem;">' + escHtml(label) + '</div>' +
+            '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">' + escHtml(description) + '</div>' +
+        '</div>' +
+        '<label class="toggle-switch">' +
+            '<input type="checkbox" id="gl-' + key + '"' + checked + ' onchange="saveGuideline(\'' + key + '\', this.checked ? \'true\' : \'false\')"/>' +
+            '<span class="toggle-slider"></span>' +
+        '</label>' +
+    '</div>';
+}
+
+function renderSelect(key, label, options, description) {
+    var current = val(key);
+    var optionsHtml = '';
+    options.forEach(function(opt) {
+        optionsHtml += '<option value="' + opt + '"' + (opt === current ? ' selected' : '') + '>' + opt + '</option>';
+    });
+    return '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">' +
+        '<div style="font-weight:500;font-size:0.88rem;margin-bottom:4px;">' + escHtml(label) + '</div>' +
+        '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">' + escHtml(description) + '</div>' +
+        '<select id="gl-' + key + '" class="form-control" style="max-width:200px;" onchange="saveGuideline(\'' + key + '\', this.value)">' +
+            optionsHtml +
+        '</select>' +
+    '</div>';
+}
+
+/* ===== Welcome Section ===== */
+function renderWelcomeSection() {
+    var title = val('guideline.welcome.title') || 'Welcome to LinkVault!';
+    var desc = val('guideline.welcome.description') || '';
+    return '<div class="ob-section">' +
+        '<h3>Welcome Experience</h3>' +
+        '<label style="display:block;font-size:0.8rem;font-weight:500;margin-bottom:4px;">Title</label>' +
+        '<input class="form-control" id="welcomeTitle" value="' + escHtml(title) + '" style="margin-bottom:10px;"/>' +
+        '<label style="display:block;font-size:0.8rem;font-weight:500;margin-bottom:4px;">Description</label>' +
+        '<textarea class="form-control" id="welcomeDesc" rows="2" style="margin-bottom:12px;">' + escHtml(desc) + '</textarea>' +
+        '<button class="btn btn-outline btn-sm" onclick="showWelcomePreview()">Preview Welcome</button>' +
+    '</div>';
+}
+
+/* ===== Screen Tabs ===== */
+function renderScreenTabs() {
+    var html = '<div class="ob-section"><h3>Screen Tour Steps</h3><div class="screen-tabs">';
+    SCREENS.forEach(function(s) {
+        var active = s === currentScreen ? ' active' : '';
+        var label = s.charAt(0).toUpperCase() + s.slice(1);
+        var count = allSteps.filter(function(st) { return st.screen === s; }).length;
+        html += '<button class="screen-tab' + active + '" onclick="switchScreen(\'' + s + '\')">' + label + (count > 0 ? ' (' + count + ')' : '') + '</button>';
+    });
+    html += '</div></div>';
+    return html;
+}
+
+/* ===== Steps List ===== */
+function renderStepsList() {
+    var steps = screenSteps();
+    var html = '<div class="ob-section"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
+        '<h3 style="margin:0;">Steps for ' + currentScreen.charAt(0).toUpperCase() + currentScreen.slice(1) + '</h3>' +
+        '<button class="btn btn-primary btn-sm" onclick="openStepEditor(null)">+ Add Step</button>' +
+    '</div>';
+
+    if (steps.length === 0) {
+        html += '<p class="hint" style="text-align:center;padding:16px 0;">No steps configured for this screen yet.</p>';
+    } else {
+        steps.forEach(function(step, idx) {
+            var disabledClass = step.enabled ? '' : ' disabled';
+            html += '<div class="step-card' + disabledClass + '">' +
+                '<div style="font-weight:600;font-size:0.82rem;color:var(--text-muted);min-width:22px;">' + (idx + 1) + '</div>' +
+                '<div class="step-info">' +
+                    '<div class="step-title">' + escHtml(step.title) + '</div>' +
+                    '<div class="step-target">' + escHtml(step.targetElement) + '</div>' +
+                '</div>' +
+                '<div class="step-actions">' +
+                    '<button onclick="previewStep(' + idx + ')" title="Preview">&#128065;</button>' +
+                    '<button onclick="openStepEditor(' + step.id + ')" title="Edit">&#9998;</button>' +
+                    '<button onclick="toggleStep(' + step.id + ')" title="Toggle">' + (step.enabled ? '&#10003;' : '&#10007;') + '</button>' +
+                    '<button onclick="moveStep(' + step.id + ', -1)" title="Move Up"' + (idx === 0 ? ' disabled' : '') + '>&#9650;</button>' +
+                    '<button onclick="moveStep(' + step.id + ', 1)" title="Move Down"' + (idx === steps.length - 1 ? ' disabled' : '') + '>&#9660;</button>' +
+                    '<button class="danger" onclick="deleteStep(' + step.id + ')" title="Delete">&#10005;</button>' +
+                '</div>' +
+            '</div>';
+        });
+    }
+
+    // Step editor form (inline)
+    html += '<div id="stepEditorSlot"></div>';
+    html += '</div>';
+    return html;
+}
+
+/* ===== Step Editor ===== */
+function openStepEditor(id) {
+    editingStepId = id;
+    var step = null;
+    if (id !== null) {
+        step = allSteps.find(function(s) { return s.id === id; });
+    }
+
+    var targets = TARGET_MAP[currentScreen] || [];
+    var targetOpts = '';
+    targets.forEach(function(t) {
+        var sel = (step && step.targetElement === t) ? ' selected' : '';
+        targetOpts += '<option value="' + t + '"' + sel + '>' + t + '</option>';
+    });
+
+    var steps = screenSteps();
+    var nextOrder = steps.length > 0 ? Math.max.apply(null, steps.map(function(s){ return s.displayOrder; })) + 1 : 0;
+
+    var slot = document.getElementById('stepEditorSlot');
+    slot.innerHTML = '<div class="step-editor">' +
+        '<label>Target Element</label>' +
+        '<select class="form-control" id="seTarget">' + targetOpts + '</select>' +
+        '<label>Title</label>' +
+        '<input class="form-control" id="seTitle" value="' + escHtml(step ? step.title : '') + '" placeholder="Step title"/>' +
+        '<label>Content</label>' +
+        '<textarea class="form-control" id="seContent" placeholder="Step description">' + escHtml(step ? step.content : '') + '</textarea>' +
+        '<input type="hidden" id="seOrder" value="' + (step ? step.displayOrder : nextOrder) + '"/>' +
+        '<div class="step-editor-actions">' +
+            '<button class="btn btn-primary btn-sm" onclick="saveStep()">Save</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="closeStepEditor()">Cancel</button>' +
+        '</div>' +
+    '</div>';
+}
+
+function closeStepEditor() {
+    editingStepId = null;
+    var slot = document.getElementById('stepEditorSlot');
+    if (slot) slot.innerHTML = '';
+}
+
+/* ===== Save Step ===== */
+function saveStep() {
+    var target = document.getElementById('seTarget').value;
+    var title = document.getElementById('seTitle').value.trim();
+    var content = document.getElementById('seContent').value.trim();
+    var order = parseInt(document.getElementById('seOrder').value, 10) || 0;
+
+    if (!target || !title || !content) {
+        showToast('All fields are required', 'error');
+        return;
+    }
+
+    var payload = { screen: currentScreen, targetElement: target, title: title, content: content, displayOrder: order };
+
+    var url = '/api/admin/guideline-steps';
+    var method = 'POST';
+    if (editingStepId !== null) {
+        url += '/' + editingStepId;
+        method = 'PUT';
+    }
+
+    adminFetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(function() {
+        editingStepId = null;
+        showToast('Step saved');
+        loadAll();
+    }).catch(function(err) {
+        showToast((err && err.message) || 'Error saving step', 'error');
+    });
+}
+
+/* ===== Delete Step ===== */
+function deleteStep(id) {
+    if (!confirm('Delete this step?')) return;
+    adminFetch('/api/admin/guideline-steps/' + id, { method: 'DELETE' })
+        .then(function() { showToast('Step deleted'); loadAll(); })
+        .catch(function(err) { showToast((err && err.message) || 'Error deleting', 'error'); });
+}
+
+/* ===== Toggle Step ===== */
+function toggleStep(id) {
+    adminFetch('/api/admin/guideline-steps/' + id + '/toggle', { method: 'PATCH' })
+        .then(function() { showToast('Step toggled'); loadAll(); })
+        .catch(function(err) { showToast((err && err.message) || 'Error toggling', 'error'); });
+}
+
+/* ===== Move Step (Reorder) ===== */
+function moveStep(id, direction) {
+    var steps = screenSteps();
+    var idx = steps.findIndex(function(s) { return s.id === id; });
+    if (idx < 0) return;
+    var swapIdx = idx + direction;
+    if (swapIdx < 0 || swapIdx >= steps.length) return;
+
+    // Swap display orders
+    var orders = steps.map(function(s, i) {
+        return { id: s.id, displayOrder: s.displayOrder };
+    });
+    var tmpOrder = orders[idx].displayOrder;
+    orders[idx].displayOrder = orders[swapIdx].displayOrder;
+    orders[swapIdx].displayOrder = tmpOrder;
+
+    adminFetch('/api/admin/guideline-steps/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orders)
+    }).then(function() { showToast('Reordered'); loadAll(); })
+    .catch(function(err) { showToast((err && err.message) || 'Error reordering', 'error'); });
+}
+
+/* ===== Screen Switch ===== */
+function switchScreen(screen) {
+    currentScreen = screen;
+    editingStepId = null;
+    previewingIndex = -1;
+    hideSpotlight();
+    render();
+}
+
+/* ===== Mock Screen Render ===== */
+function renderMockScreen(screen) {
+    var frame = document.getElementById('simScreen');
+    frame.innerHTML = MOCK_SCREENS[screen] || '<div style="padding:40px;text-align:center;color:#9ca3af;">No preview available</div>';
+}
+
+/* ===== Welcome Preview ===== */
+function showWelcomePreview() {
+    var titleEl = document.getElementById('welcomeTitle');
+    var descEl = document.getElementById('welcomeDesc');
+    document.getElementById('wmTitle').textContent = titleEl ? titleEl.value : 'Welcome!';
+    document.getElementById('wmDesc').textContent = descEl ? descEl.value : '';
+    document.getElementById('simWelcomeModal').style.display = 'flex';
+}
+
+function hideWelcomePreview() {
+    document.getElementById('simWelcomeModal').style.display = 'none';
+}
+
+/* ===== Step Preview (Spotlight + Tooltip) ===== */
+function previewStep(index) {
+    var steps = screenSteps();
+    if (index < 0 || index >= steps.length) {
+        hideSpotlight();
+        return;
+    }
+    previewingIndex = index;
+    var step = steps[index];
+    var frame = document.getElementById('simFrame');
+    var target = frame.querySelector('[data-target="' + step.targetElement + '"]');
+
+    var spotlight = document.getElementById('simSpotlight');
+    var tooltip = document.getElementById('simTooltip');
+
+    if (!target) {
+        spotlight.style.display = 'none';
+        tooltip.style.display = 'none';
+        showToast('Target element "' + step.targetElement + '" not found in simulator', 'error');
+        return;
+    }
+
+    var frameRect = frame.getBoundingClientRect();
+    var targetRect = target.getBoundingClientRect();
+
+    var top = targetRect.top - frameRect.top;
+    var left = targetRect.left - frameRect.left;
+    var w = targetRect.width;
+    var h = targetRect.height;
+    var pad = 4;
+
+    // Spotlight: box-shadow cutout
+    spotlight.style.display = 'block';
+    spotlight.style.boxShadow = '0 0 0 9999px rgba(0,0,0,0.45)';
+    spotlight.style.top = (top - pad) + 'px';
+    spotlight.style.left = (left - pad) + 'px';
+    spotlight.style.width = (w + pad * 2) + 'px';
+    spotlight.style.height = (h + pad * 2) + 'px';
+    spotlight.style.right = 'auto';
+    spotlight.style.bottom = 'auto';
+    spotlight.style.borderRadius = '6px';
+
+    // Tooltip positioning
+    tooltip.style.display = 'block';
+
+    var navHtml = '<div class="tt-nav">';
+    if (index > 0) {
+        navHtml += '<button onclick="previewStep(' + (index - 1) + ')">&#9664; Prev</button>';
+    } else {
+        navHtml += '<span></span>';
+    }
+    if (index < steps.length - 1) {
+        navHtml += '<button onclick="previewStep(' + (index + 1) + ')">Next &#9654;</button>';
+    } else {
+        navHtml += '<button onclick="hideSpotlight()">Done</button>';
+    }
+    navHtml += '</div>';
+    navHtml += '<div class="tt-step-indicator">Step ' + (index + 1) + ' of ' + steps.length + '</div>';
+
+    tooltip.innerHTML = '<div class="tt-title">' + escHtml(step.title) + '</div>' +
+        '<div class="tt-content">' + escHtml(step.content) + '</div>' + navHtml;
+
+    // Position tooltip below or above target
+    var ttTop = top + h + pad + 8;
+    var ttLeft = left;
+    if (ttLeft + 220 > frame.offsetWidth) {
+        ttLeft = frame.offsetWidth - 230;
+    }
+    if (ttLeft < 4) ttLeft = 4;
+    if (ttTop + 120 > frame.offsetHeight) {
+        ttTop = top - pad - 130;
+    }
+    tooltip.style.top = ttTop + 'px';
+    tooltip.style.left = ttLeft + 'px';
+}
+
+function hideSpotlight() {
+    previewingIndex = -1;
+    document.getElementById('simSpotlight').style.display = 'none';
+    document.getElementById('simTooltip').style.display = 'none';
+}
+
+/* ===== Save Guideline Setting ===== */
+function saveGuideline(key, value) {
+    adminFetch('/api/admin/settings/' + encodeURIComponent(key), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: value })
+    }).then(function(result) {
+        if (result && result.settingKey) {
+            settings[result.settingKey] = result;
+        }
+        showToast('Saved');
+    }).catch(function(err) {
+        var msg = (err && err.status === 403) ? 'Insufficient permission' : (err && err.message) || 'Error saving';
+        showToast(msg, 'error');
+        loadAll();
+    });
+}
+
+/* ===== Publish All (save welcome settings) ===== */
+function publishAll() {
+    var titleInput = document.getElementById('welcomeTitle');
+    var descInput = document.getElementById('welcomeDesc');
+    if (!titleInput || !descInput) return;
+
+    var title = titleInput.value.trim();
+    var desc = descInput.value.trim();
+
+    Promise.all([
+        adminFetch('/api/admin/settings/' + encodeURIComponent('guideline.welcome.title'), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: title })
+        }),
+        adminFetch('/api/admin/settings/' + encodeURIComponent('guideline.welcome.description'), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: desc })
+        })
+    ]).then(function(results) {
+        results.forEach(function(r) {
+            if (r && r.settingKey) settings[r.settingKey] = r;
+        });
+        showToast('Published successfully');
+    }).catch(function(err) {
+        showToast((err && err.message) || 'Error publishing', 'error');
+    });
+}
+
+/* ===== Init ===== */
+document.addEventListener('DOMContentLoaded', loadAll);
+</script>
+</body>
+</html>

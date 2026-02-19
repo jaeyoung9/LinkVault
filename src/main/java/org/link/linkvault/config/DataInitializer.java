@@ -497,6 +497,18 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
+    private void ensureMenuItem(String label, String url, MenuType menuType,
+                               int displayOrder, String requiredPermission) {
+        if (!menuItemRepository.existsByMenuTypeAndUrl(menuType, url)) {
+            menuItemRepository.save(MenuItem.builder()
+                    .label(label).url(url).menuType(menuType)
+                    .displayOrder(displayOrder).visible(true)
+                    .requiredPermission(requiredPermission)
+                    .systemItem(true).createdBy("system").build());
+            log.info("Menu item added: {} -> {}", label, url);
+        }
+    }
+
     private void initSystemSettings() {
         log.info("Initializing system settings...");
 
@@ -525,10 +537,44 @@ public class DataInitializer implements CommandLineRunner {
         ensureSetting("audit.masking.level", "BASIC",
                 "Audit detail masking level: NONE, BASIC, or STRICT", "AUDIT_POLICY");
 
+        // Guidelines settings
+        initGuidelinesSettings();
+
         log.info("System settings initialized with defaults");
 
         // Monetization settings
         initMonetizationSettings();
+    }
+
+    private void initGuidelinesSettings() {
+        ensureSetting("guideline.enabled", "false",
+                "Enable first-time user guidelines globally", "GUIDELINES");
+        ensureSetting("guideline.first-login-only", "true",
+                "Show guidelines only on first login (vs every login)", "GUIDELINES");
+        ensureSetting("guideline.dismissible", "true",
+                "Allow users to dismiss guidelines", "GUIDELINES");
+        ensureSetting("guideline.default-mode", "TOOLTIP",
+                "Default display mode: TOOLTIP, MODAL, or CHECKLIST", "GUIDELINES");
+        ensureSetting("guideline.screen.feed.enabled", "true",
+                "Enable onboarding focus on Feed screen", "GUIDELINES");
+        ensureSetting("guideline.screen.map.enabled", "true",
+                "Enable onboarding focus on Map Discover screen", "GUIDELINES");
+        ensureSetting("guideline.screen.saved.enabled", "true",
+                "Enable onboarding focus on Saved screen", "GUIDELINES");
+        ensureSetting("guideline.screen.import.enabled", "false",
+                "Enable onboarding focus on Import screen", "GUIDELINES");
+        ensureSetting("guideline.screen.settings.enabled", "false",
+                "Enable onboarding focus on Settings screen", "GUIDELINES");
+
+        ensureSetting("guideline.welcome.title", "Welcome to LinkVault!",
+                "Welcome modal headline text", "GUIDELINES");
+        ensureSetting("guideline.welcome.description",
+                "Let us show you around. This quick tour highlights the key features.",
+                "Welcome modal body description text", "GUIDELINES");
+
+        // Ensure admin sidebar menu item (idempotent — works even if initMenuItems already ran)
+        ensureMenuItem("Guidelines", "/admin/guidelines", MenuType.ADMIN_SIDEBAR,
+                17, "SYSTEM_SETTINGS");
     }
 
     private void initMonetizationSettings() {

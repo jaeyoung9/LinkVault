@@ -76,4 +76,12 @@ public class UserSettingsApiController {
         userSettingsService.changeEmail(user, body.get("email"));
         return ResponseEntity.ok(Map.of("message", "Email changed successfully"));
     }
+
+    @PostMapping("/guidelines/complete")
+    public ResponseEntity<Map<String, String>> completeGuidelines(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserEntity(userDetails.getUsername());
+        userSettingsService.completeGuidelines(user);
+        return ResponseEntity.ok(Map.of("message", "Guidelines completed"));
+    }
 }

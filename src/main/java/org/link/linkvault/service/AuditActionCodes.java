@@ -57,6 +57,13 @@ public final class AuditActionCodes {
 
     // System settings
     public static final String SETTINGS_UPDATE = "ADMIN_SETTINGS_UPDATE";
+
+    // Guideline step management
+    public static final String GUIDELINE_STEP_CREATE  = "ADMIN_GUIDELINE_STEP_CREATE";
+    public static final String GUIDELINE_STEP_UPDATE  = "ADMIN_GUIDELINE_STEP_UPDATE";
+    public static final String GUIDELINE_STEP_DELETE  = "ADMIN_GUIDELINE_STEP_DELETE";
+    public static final String GUIDELINE_STEP_TOGGLE  = "ADMIN_GUIDELINE_STEP_TOGGLE";
+    public static final String GUIDELINE_STEP_REORDER = "ADMIN_GUIDELINE_STEP_REORDER";
     public static final String AUDIT_POLICY_UPDATE = "ADMIN_AUDIT_POLICY_UPDATE";
 
     // Comment moderation
