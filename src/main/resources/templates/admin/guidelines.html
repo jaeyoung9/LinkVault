@@ -579,18 +579,50 @@ function previewStep(index) {
     tooltip.innerHTML = '<div class="tt-title">' + escHtml(step.title) + '</div>' +
         '<div class="tt-content">' + escHtml(step.content) + '</div>' + navHtml;
 
-    // Position tooltip below or above target
-    var ttTop = top + h + pad + 8;
-    var ttLeft = left;
-    if (ttLeft + 220 > frame.offsetWidth) {
-        ttLeft = frame.offsetWidth - 230;
-    }
-    if (ttLeft < 4) ttLeft = 4;
-    if (ttTop + 120 > frame.offsetHeight) {
-        ttTop = top - pad - 130;
-    }
-    tooltip.style.top = ttTop + 'px';
-    tooltip.style.left = ttLeft + 'px';
+    // Position tooltip so it does not obscure the target element
+    requestAnimationFrame(function() {
+        var ttW = tooltip.offsetWidth;
+        var ttH = tooltip.offsetHeight;
+        var frameW = frame.offsetWidth;
+        var frameH = frame.offsetHeight;
+        var gap = 10;
+        var spotBottom = top + h + pad;
+        var spotTop = top - pad;
+        var spotRight = left + w + pad;
+        var spotLeft = left - pad;
+        var ttTop, ttLeft;
+
+        // Try below target
+        if (spotBottom + gap + ttH <= frameH) {
+            ttTop = spotBottom + gap;
+            ttLeft = left;
+        // Try above target
+        } else if (spotTop - gap - ttH >= 0) {
+            ttTop = spotTop - gap - ttH;
+            ttLeft = left;
+        // Try right of target
+        } else if (spotRight + gap + ttW <= frameW) {
+            ttTop = top;
+            ttLeft = spotRight + gap;
+        // Try left of target
+        } else if (spotLeft - gap - ttW >= 0) {
+            ttTop = top;
+            ttLeft = spotLeft - gap - ttW;
+        // Fallback: below, clamped
+        } else {
+            ttTop = spotBottom + gap;
+            ttLeft = left;
+        }
+
+        // Clamp within frame
+        if (ttLeft + ttW > frameW - 4) ttLeft = frameW - ttW - 4;
+        if (ttLeft < 4) ttLeft = 4;
+        if (ttTop + ttH > frameH - 4) ttTop = frameH - ttH - 4;
+        if (ttTop < 4) ttTop = 4;
+
+        tooltip.style.top = ttTop + 'px';
+        tooltip.style.left = ttLeft + 'px';
+    });
 }
 
 function hideSpotlight() {

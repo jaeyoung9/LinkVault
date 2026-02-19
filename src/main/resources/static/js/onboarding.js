@@ -222,23 +222,38 @@
         var ttRect = tt.getBoundingClientRect();
         var viewH = window.innerHeight;
         var viewW = window.innerWidth;
-
+        var gap = 12;
+        var ttW = ttRect.width;
+        var ttH = ttRect.height;
         var top, left;
 
         // Try below target
-        top = targetRect.bottom + 12;
-        if (top + ttRect.height > viewH) {
-            // Try above
-            top = targetRect.top - ttRect.height - 12;
+        if (targetRect.bottom + gap + ttH <= viewH) {
+            top = targetRect.bottom + gap;
+            left = targetRect.left;
+        // Try above target
+        } else if (targetRect.top - gap - ttH >= 0) {
+            top = targetRect.top - gap - ttH;
+            left = targetRect.left;
+        // Try right of target
+        } else if (targetRect.right + gap + ttW <= viewW) {
+            top = targetRect.top;
+            left = targetRect.right + gap;
+        // Try left of target
+        } else if (targetRect.left - gap - ttW >= 0) {
+            top = targetRect.top;
+            left = targetRect.left - gap - ttW;
+        // Fallback: below, clamped
+        } else {
+            top = targetRect.bottom + gap;
+            left = targetRect.left;
         }
-        if (top < 8) top = 8;
 
-        // Horizontal: align with target left, but keep within viewport
-        left = targetRect.left;
-        if (left + ttRect.width > viewW - 12) {
-            left = viewW - ttRect.width - 12;
-        }
+        // Clamp within viewport
+        if (left + ttW > viewW - 12) left = viewW - ttW - 12;
         if (left < 12) left = 12;
+        if (top + ttH > viewH - 8) top = viewH - ttH - 8;
+        if (top < 8) top = 8;
 
         tt.style.top = top + 'px';
         tt.style.left = left + 'px';
